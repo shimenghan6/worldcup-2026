@@ -242,7 +242,7 @@ const GROUPS = {
   J: { name:'J组', color:'#00bcd4', teams:['阿根廷','阿尔及利亚','奥地利','约旦'] },
   K: { name:'K组', color:'#8bc34a', teams:['葡萄牙','民主刚果','乌兹别克斯坦','哥伦比亚'] },
   L: { name:'L组', color:'#ff4081', teams:['英格兰','克罗地亚','加纳','巴拿马'] },
-  KO: { name:'淘汰赛', color:'#f5c542', teams:[] }
+  KO: { name:'淘汰赛', color:'#f5c542', teams:['32强(6/29-7/4)','16强(7/5-7/8)','1/4决赛(7/10-12)','半决赛(7/15-16)','季军赛(7/19)','🏆决赛(7/20)'] }
 };
 
 const ROUND_NAMES = {
@@ -321,11 +321,11 @@ const MATCHES = [
   // === Round 3 (小组赛末轮, 同组同时开球) ===
   { id:49, date:'2026-06-25', time:'03:00', group:'B', home:'瑞士', away:'加拿大', round:3, venue:'温哥华·BC Place', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'B组出线决战' },
   { id:50, date:'2026-06-25', time:'03:00', group:'B', home:'波黑', away:'卡塔尔', round:3, venue:'西雅图·Lumen球场', odds:{spf:'待定', tip:'待定', level:'—'} },
-  { id:51, date:'2026-06-25', time:'06:00', group:'C', home:'苏格兰', away:'巴西', round:3, venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥巴西关键战' },
+  { id:51, date:'2026-06-25', time:'06:00', group:'C', home:'苏格兰', away:'巴西', round:3, venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'负', level:'🟢铁胆', totalGoals:'3球/4球', htft:'负-负', score:'0:3/0:4'}, focus:'🔥巴西关键战' },
   { id:52, date:'2026-06-25', time:'06:00', group:'C', home:'摩洛哥', away:'海地', round:3, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
   { id:53, date:'2026-06-25', time:'09:00', group:'A', home:'捷克', away:'墨西哥', round:3, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'A组出线决战' },
   { id:54, date:'2026-06-25', time:'09:00', group:'A', home:'南非', away:'韩国', round:3, venue:'蒙特雷体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
-  { id:55, date:'2026-06-26', time:'04:00', group:'E', home:'厄瓜多尔', away:'德国', round:3, venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'E组头名战' },
+  { id:55, date:'2026-06-26', time:'04:00', group:'E', home:'厄瓜多尔', away:'德国', round:3, venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'负', level:'🟡稳胆', totalGoals:'2球/3球', htft:'负-负/平-负', score:'1:2/0:2'}, focus:'E组头名战' },
   { id:56, date:'2026-06-26', time:'04:00', group:'E', home:'库拉索', away:'科特迪瓦', round:3, venue:'费城·林肯金融球场', odds:{spf:'待定', tip:'待定', level:'—'} },
   { id:57, date:'2026-06-26', time:'07:00', group:'F', home:'日本', away:'瑞典', round:3, venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥死亡之组终局' },
   { id:58, date:'2026-06-26', time:'07:00', group:'F', home:'突尼斯', away:'荷兰', round:3, venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
@@ -342,7 +342,7 @@ const MATCHES = [
   { id:69, date:'2026-06-28', time:'07:30', group:'K', home:'哥伦比亚', away:'葡萄牙', round:3, venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'⭐C罗小组终战' },
   { id:70, date:'2026-06-28', time:'07:30', group:'K', home:'民主刚果', away:'乌兹别克斯坦', round:3, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
   { id:71, date:'2026-06-28', time:'10:00', group:'J', home:'阿尔及利亚', away:'奥地利', round:3, venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
-  { id:72, date:'2026-06-28', time:'10:00', group:'J', home:'约旦', away:'阿根廷', round:3, venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'⭐梅西小组终战' },
+  { id:72, date:'2026-06-28', time:'10:00', group:'J', home:'约旦', away:'阿根廷', round:3, venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'负', level:'🟢铁胆', totalGoals:'3球/2球', htft:'负-负', score:'0:3/0:2'}, focus:'⭐梅西小组终战' },
   // === 淘汰赛 1/16决赛 (32强) ===
   { id:73, date:'2026-06-29', time:'待定', group:'KO', home:'A组第2', away:'B组第2', round:'R32', venue:'洛杉矶·SoFi体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
   { id:74, date:'2026-06-30', time:'待定', group:'KO', home:'E组第1', away:'第3(A/B/C/D)', round:'R32', venue:'波士顿·吉列体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
@@ -449,8 +449,22 @@ function mergeLiveData() {
   }
 }
 
+// Debounced search (prevents focus loss on every keystroke)
+let searchTimer = null;
+function debounceSearch(val) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    teamFilter = val;
+    render(currentView);
+  }, 300);
+}
 // ============ HELPERS ============
-function flag(team) { return FLAGS[team] || (/^[A-Z]组/.test(team) ? '🏟️' : /胜者|负者/.test(team) ? '⚽' : '🏳️'); }
+function flag(team) {
+  if (FLAGS[team]) return FLAGS[team];
+  if (/^[A-L]组第[123]/.test(team) || /^第3\(/.test(team)) return '🏟️';
+  if (/胜者|负者/.test(team)) return '⚽';
+  return '🏳️';
+}
 function groupColor(g) { return GROUPS[g]?.color || '#888'; }
 
 function formatDate(d) {
@@ -630,17 +644,17 @@ function renderAnalysis() {
       <div style="background:rgba(0,212,170,0.08);border-radius:12px;padding:16px;border:1px solid rgba(0,212,170,0.15)">
         <h4>🏆 冠军预测</h4>
         <p style="font-size:0.85em;color:var(--muted);margin-top:8px">西班牙 4.75 | 法国 5.00 | 阿根廷 8.50 | 英格兰 5.00</p>
-        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请在微信中向机器人发送「冠军分析」')" style="color:var(--accent)">→ 获取深度分析</a></p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="this.textContent='✅ 已复制: 向微信机器人发送「冠军分析」';setTimeout(()=>this.textContent='→ 获取深度分析',2000)" style="color:var(--accent)">→ 获取深度分析</a></p>
       </div>
       <div style="background:rgba(245,197,66,0.08);border-radius:12px;padding:16px;border:1px solid rgba(245,197,66,0.15)">
         <h4>📅 每日推荐</h4>
         <p style="font-size:0.85em;color:var(--muted);margin-top:8px">每天自动分析当日所有场次，SPF+让球+总进球+半全场+比分</p>
-        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请在微信中向机器人发送「今日推荐」')" style="color:var(--gold)">→ 查看今日推荐</a></p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="this.textContent='✅ 已复制: 向微信机器人发送「今日推荐」';setTimeout(()=>this.textContent='→ 查看今日推荐',2000)" style="color:var(--gold)">→ 查看今日推荐</a></p>
       </div>
       <div style="background:rgba(52,152,219,0.08);border-radius:12px;padding:16px;border:1px solid rgba(52,152,219,0.15)">
         <h4>🔢 串关计算器</h4>
         <p style="font-size:0.85em;color:var(--muted);margin-top:8px">输入投注金额+所选场次，自动计算最大收益和保本条件</p>
-        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('即将上线！')" style="color:#3498db">→ 即将上线</a></p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="this.textContent='⏳ 世界杯开赛后上线';setTimeout(()=>this.textContent='→ 即将上线',2000)" style="color:#3498db">→ 即将上线</a></p>
       </div>
       <div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:16px;border:1px solid rgba(231,76,60,0.15)">
         <h4>📄 完整方案下载</h4>
@@ -683,7 +697,7 @@ function showMatch(id) {
     <div class="m-detail">📊 ${GROUPS[m.group]?.name||'淘汰赛'} · ${ROUND_NAMES[m.round]||'第'+m.round+'轮'} ${m.focus||''}</div>
     ${m.injury ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
     <div class="prediction">
-      <h4>🤖 AI推荐</h4>
+      <h4>🤖 AI推荐 <span style="font-size:0.7em;color:var(--accent);font-weight:400">AI预估</span></h4>
       <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'} ${tips[m.odds?.tip]||''}</span></div>
       <div class="bet-row"><span>胜平负SPF</span><span>${m.odds?.spf||'待开售'}</span></div>
       <div class="bet-row"><span>信心等级</span><span>${m.odds?.level||'—'}</span></div>
@@ -718,7 +732,7 @@ function render(view) {
         <option value="all">📊 全部小组</option>
         ${Object.entries(GROUPS).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('')}
       </select>
-      <input id="teamFilter" type="text" placeholder="🔍 搜索球队..." oninput="teamFilter=this.value;render(currentView)">
+      <input id="teamFilter" type="text" placeholder="🔍 搜索球队..." oninput="debounceSearch(this.value)">
       <button class="ai-badge" onclick="render('analysis')">🤖 AI分析</button>
     </div>`;
     html += '<div class="match-list">' + renderSchedule() + '</div>';
