@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026世界杯赛程日历 | 美加墨世界杯</title>
+<meta name="description" content="2026美加墨世界杯完整赛程日历，北京时间，48队12组，实时倒计时，AI投注分析">
+<style>
+:root {
+  --bg: #0a0e27;
+  --card: #111640;
+  --accent: #00d4aa;
+  --gold: #f5c542;
+  --text: #e0e0e0;
+  --muted: #8890b5;
+  --danger: #ff4757;
+  --border: #1e2358;
+  --group-a: #e74c3c; --group-b: #e67e22; --group-c: #f1c40f; --group-d: #2ecc71;
+  --group-e: #1abc9c; --group-f: #3498db; --group-g: #9b59b6; --group-h: #e91e63;
+  --group-i: #ff6f00; --group-j: #00bcd4; --group-k: #8bc34a; --group-l: #ff4081;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh;
+}
+/* Header / Hero */
+.hero {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1040 50%, #0d2137 100%);
+  padding: 40px 20px; text-align: center; position: relative; overflow: hidden;
+}
+.hero::before {
+  content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(0,212,170,0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 50%, rgba(245,197,66,0.06) 0%, transparent 50%);
+  animation: heroPulse 8s ease-in-out infinite;
+}
+@keyframes heroPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
+.hero h1 { font-size:2.4em; font-weight:900; position:relative; z-index:1; background:linear-gradient(135deg, #f5c542, #e67e22, #f5c542); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero .subtitle { color:var(--muted); font-size:1.1em; margin-top:8px; position:relative; z-index:1; }
+.hero .dates { color:var(--accent); font-size:0.95em; margin-top:4px; position:relative; z-index:1; }
+
+/* Countdown */
+.countdown-bar {
+  display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+  margin:24px auto; max-width:600px; position:relative; z-index:1;
+}
+.cd-item {
+  background:rgba(255,255,255,0.05); border:1px solid var(--border);
+  border-radius:16px; padding:16px 20px; min-width:80px; text-align:center;
+  backdrop-filter:blur(10px);
+}
+.cd-item .num { font-size:2.6em; font-weight:900; color:var(--gold); line-height:1; }
+.cd-item .label { font-size:0.8em; color:var(--muted); margin-top:4px; }
+
+/* Nav tabs */
+.nav-tabs {
+  display:flex; gap:4px; padding:12px 16px; overflow-x:auto;
+  background:rgba(17,22,64,0.8); backdrop-filter:blur(10px);
+  position:sticky; top:0; z-index:100; border-bottom:1px solid var(--border);
+}
+.nav-tabs button {
+  padding:8px 18px; border-radius:20px; border:1px solid var(--border);
+  background:transparent; color:var(--muted); cursor:pointer;
+  font-size:0.9em; white-space:nowrap; transition:all 0.2s;
+}
+.nav-tabs button:hover { border-color:var(--accent); color:var(--text); }
+.nav-tabs button.active { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+
+/* Main container */
+.container { max-width:1200px; margin:0 auto; padding:20px; }
+
+/* Filters */
+.filters {
+  display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; align-items:center;
+}
+.filters select, .filters input {
+  padding:8px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--card); color:var(--text); font-size:0.9em;
+}
+.filters input::placeholder { color:var(--muted); }
+.filters .ai-badge {
+  margin-left:auto; padding:8px 16px; border-radius:20px;
+  background:linear-gradient(135deg, #f5c542, #e67e22);
+  color:#000; font-weight:700; font-size:0.85em; cursor:pointer;
+  border:none; transition:transform 0.2s;
+}
+.filters .ai-badge:hover { transform:scale(1.05); }
+
+/* Match cards */
+.match-list { display:flex; flex-direction:column; gap:8px; }
+.date-header {
+  color:var(--accent); font-weight:700; font-size:1.1em;
+  padding:12px 0 4px; border-bottom:1px solid var(--border);
+  margin-top:8px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.date-header .round-badge {
+  font-size:0.7em; padding:3px 10px; border-radius:10px;
+  background:var(--accent); color:#000; font-weight:700;
+}
+.match-card {
+  background:var(--card); border-radius:12px; padding:14px 18px;
+  display:grid; grid-template-columns:40px 1fr auto 1fr 60px;
+  gap:10px; align-items:center; border:1px solid transparent;
+  transition:all 0.2s; cursor:pointer;
+}
+.match-card:hover { border-color:var(--accent); transform:translateX(4px); }
+.match-card .m-time { color:var(--muted); font-size:0.85em; text-align:center; }
+.match-card .team { display:flex; align-items:center; gap:8px; font-weight:600; }
+.match-card .team.home { justify-content:flex-end; text-align:right; }
+.match-card .team .flag { font-size:1.5em; }
+.match-card .team .name { font-size:0.95em; }
+.match-card .vs {
+  text-align:center; font-weight:900; color:var(--muted);
+  font-size:0.8em; min-width:40px;
+}
+.match-card .m-group {
+  width:28px; height:28px; border-radius:6px; display:flex;
+  align-items:center; justify-content:center; font-size:0.75em;
+  font-weight:900; color:#fff;
+}
+.match-card .venue { font-size:0.7em; color:var(--muted); grid-column:1/-1; }
+.match-card .odds-row {
+  grid-column:1/-1; display:flex; gap:12px; font-size:0.78em;
+  color:var(--muted); padding-top:6px; border-top:1px solid var(--border);
+  margin-top:4px;
+}
+.odds-row .odds-tag { color:var(--accent); font-weight:600; }
+.odds-row span { background:rgba(255,255,255,0.03); padding:2px 8px; border-radius:4px; }
+
+.match-card.with-odds { border-left:3px solid var(--accent); }
+
+/* Group tables */
+.groups-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+.group-card {
+  background:var(--card); border-radius:12px; overflow:hidden;
+  border-top:3px solid var(--border);
+}
+.group-card h3 { padding:12px 16px; font-size:1em; display:flex; justify-content:space-between; align-items:center; }
+.group-card table { width:100%; border-collapse:collapse; font-size:0.85em; }
+.group-card th { color:var(--muted); font-weight:500; padding:6px 12px; text-align:left; font-size:0.8em; }
+.group-card td { padding:8px 12px; border-top:1px solid rgba(255,255,255,0.03); }
+.group-card .rank { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.75em; font-weight:700; }
+.group-card .rank.q { background:rgba(0,212,170,0.2); color:var(--accent); }
+.group-card .rank.po { background:rgba(245,197,66,0.2); color:var(--gold); }
+
+/* Modal */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.modal {
+  background:var(--card); border-radius:16px; padding:24px; max-width:500px;
+  width:100%; max-height:90vh; overflow-y:auto; border:1px solid var(--border);
+}
+.modal h2 { font-size:1.3em; margin-bottom:12px; }
+.modal .m-detail { margin:8px 0; color:var(--muted); font-size:0.9em; }
+.modal .prediction {
+  background:rgba(0,212,170,0.1); border-radius:10px; padding:16px;
+  margin-top:16px; border:1px solid rgba(0,212,170,0.2);
+}
+.modal .prediction h4 { color:var(--accent); margin-bottom:8px; }
+.modal .prediction .bet-row { display:flex; justify-content:space-between; padding:4px 0; font-size:0.9em; }
+.modal button.close {
+  width:100%; margin-top:16px; padding:10px; border-radius:8px;
+  background:var(--border); color:var(--text); border:none; cursor:pointer; font-size:1em;
+}
+.modal button.close:hover { background:var(--accent); color:#000; }
+
+/* Footer */
+.footer {
+  text-align:center; padding:30px; color:var(--muted); font-size:0.8em;
+  border-top:1px solid var(--border); margin-top:40px;
+}
+.footer a { color:var(--accent); text-decoration:none; }
+
+/* Mobile */
+@media (max-width:640px) {
+  .hero h1 { font-size:1.6em; }
+  .cd-item { padding:12px 14px; min-width:60px; }
+  .cd-item .num { font-size:2em; }
+  .match-card { grid-template-columns:32px 1fr auto 1fr 44px; padding:10px 12px; gap:6px; }
+  .match-card .team .name { font-size:0.82em; }
+  .match-card .venue { display:none; }
+  .filters { gap:4px; }
+  .filters select, .filters input { font-size:0.8em; padding:6px 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>🏆 2026 美加墨世界杯</h1>
+  <div class="subtitle">FIFA World Cup 2026 · 48队 · 104场 · 首次扩军</div>
+  <div class="dates">🇨🇦 加拿大 · 🇲🇽 墨西哥 · 🇺🇸 美国 | 6月12日 - 7月20日（北京时间）</div>
+  <div class="countdown-bar" id="countdown"></div>
+</div>
+
+<!-- Nav -->
+<nav class="nav-tabs" id="navTabs">
+  <button data-view="schedule" class="active">📅 完整赛程</button>
+  <button data-view="today">🔴 今日比赛</button>
+  <button data-view="groups">📊 分组积分</button>
+  <button data-view="focus">⭐ 焦点战</button>
+  <button data-view="analysis">🤖 AI分析</button>
+</nav>
+
+<!-- Main Content -->
+<div class="container" id="mainContent"></div>
+
+<!-- Match Detail Modal -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>数据来源：<a href="https://www.sporttery.cn" target="_blank">中国竞彩网</a> ·
+     <a href="https://www.fifa.com" target="_blank">FIFA Official</a> ·
+     <a href="https://github.com" target="_blank">开源项目</a></p>
+  <p>⚠️ 赔率为国际盘口换算预估，实际以竞彩出票为准 | 理性购彩 | 禁止未成年人购彩</p>
+  <p>Made with ❤️ by AI · 2026-06-06</p>
+</div>
+
+<script>
+// ============ DATA ============
+const GROUPS = {
+  A: { name:'A组', color:'#e74c3c', teams:['墨西哥','南非','韩国','捷克'] },
+  B: { name:'B组', color:'#e67e22', teams:['加拿大','波黑','卡塔尔','瑞士'] },
+  C: { name:'C组', color:'#f1c40f', teams:['巴西','摩洛哥','海地','苏格兰'] },
+  D: { name:'D组', color:'#2ecc71', teams:['美国','巴拉圭','澳大利亚','土耳其'] },
+  E: { name:'E组', color:'#1abc9c', teams:['德国','库拉索','科特迪瓦','厄瓜多尔'] },
+  F: { name:'F组', color:'#3498db', teams:['荷兰','日本','瑞典','突尼斯'] },
+  G: { name:'G组', color:'#9b59b6', teams:['比利时','埃及','伊朗','新西兰'] },
+  H: { name:'H组', color:'#e91e63', teams:['西班牙','佛得角','沙特阿拉伯','乌拉圭'] },
+  I: { name:'I组', color:'#ff6f00', teams:['法国','塞内加尔','伊拉克','挪威'] },
+  J: { name:'J组', color:'#00bcd4', teams:['阿根廷','阿尔及利亚','奥地利','约旦'] },
+  K: { name:'K组', color:'#8bc34a', teams:['葡萄牙','民主刚果','乌兹别克斯坦','哥伦比亚'] },
+  L: { name:'L组', color:'#ff4081', teams:['英格兰','克罗地亚','加纳','巴拿马'] }
+};
+
+const FLAGS = {
+  '墨西哥':'🇲🇽','南非':'🇿🇦','韩国':'🇰🇷','捷克':'🇨🇿',
+  '加拿大':'🇨🇦','波黑':'🇧🇦','卡塔尔':'🇶🇦','瑞士':'🇨🇭',
+  '巴西':'🇧🇷','摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  '美国':'🇺🇸','巴拉圭':'🇵🇾','澳大利亚':'🇦🇺','土耳其':'🇹🇷',
+  '德国':'🇩🇪','库拉索':'🇨🇼','科特迪瓦':'🇨🇮','厄瓜多尔':'🇪🇨',
+  '荷兰':'🇳🇱','日本':'🇯🇵','瑞典':'🇸🇪','突尼斯':'🇹🇳',
+  '比利时':'🇧🇪','埃及':'🇪🇬','伊朗':'🇮🇷','新西兰':'🇳🇿',
+  '西班牙':'🇪🇸','佛得角':'🇨🇻','沙特阿拉伯':'🇸🇦','乌拉圭':'🇺🇾',
+  '法国':'🇫🇷','塞内加尔':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴',
+  '阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴',
+  '葡萄牙':'🇵🇹','民主刚果':'🇨🇩','乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴',
+  '英格兰':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
+};
+
+// Full match schedule (Beijing time)
+const MATCHES = [
+  // === Round 1 ===
+  { id:1, date:'2026-06-12', time:'03:00', group:'A', home:'墨西哥', away:'南非', round:1, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'1.35/4.50/8.00', tip:'胜', level:'🟢铁胆'}, focus:'🎬揭幕战' },
+  { id:2, date:'2026-06-12', time:'10:00', group:'A', home:'韩国', away:'捷克', round:1, venue:'瓜达拉哈拉体育场', odds:{spf:'2.30/3.10/3.00', tip:'胜', level:'🟡稳胆'} },
+  { id:3, date:'2026-06-13', time:'03:00', group:'B', home:'加拿大', away:'波黑', round:1, venue:'多伦多·BMO球场', odds:{spf:'2.00/3.20/3.60', tip:'胜', level:'🟠大概率'}, injury:'阿方索·戴维斯缺阵' },
+  { id:4, date:'2026-06-13', time:'09:00', group:'D', home:'美国', away:'巴拉圭', round:1, venue:'洛杉矶·SoFi体育场', odds:{spf:'1.55/3.60/6.00', tip:'胜', level:'🟢铁胆'} },
+  { id:5, date:'2026-06-14', time:'03:00', group:'B', home:'卡塔尔', away:'瑞士', round:1, venue:'旧金山·Levi\'s体育场', odds:{spf:'5.50/3.80/1.60', tip:'负', level:'🟢铁胆'} },
+  { id:6, date:'2026-06-14', time:'06:00', group:'C', home:'巴西', away:'摩洛哥', round:1, venue:'纽约·大都会人寿体育场', odds:{spf:'1.70/3.60/4.50', tip:'胜', level:'🟡稳胆'}, focus:'⭐焦点战' },
+  { id:7, date:'2026-06-14', time:'09:00', group:'C', home:'海地', away:'苏格兰', round:1, venue:'波士顿·吉列体育场', odds:{spf:'6.50/4.00/1.50', tip:'负', level:'🟢铁胆'} },
+  { id:8, date:'2026-06-14', time:'12:00', group:'D', home:'澳大利亚', away:'土耳其', round:1, venue:'温哥华·BC Place', odds:{spf:'2.80/3.10/2.40', tip:'负', level:'🟠大概率'} },
+  { id:9, date:'2026-06-15', time:'01:00', group:'E', home:'德国', away:'库拉索', round:1, venue:'休斯顿·NRG体育场', odds:{spf:'1.08/9.00/25.00', tip:'胜', level:'🟢铁胆'} },
+  { id:10, date:'2026-06-15', time:'04:00', group:'F', home:'荷兰', away:'日本', round:1, venue:'达拉斯·AT&T体育场', odds:{spf:'1.75/3.50/4.50', tip:'胜', level:'🟡稳胆'}, focus:'🔥死亡之组', injury:'日本:三笘薰+南野伤缺'} ,
+  { id:11, date:'2026-06-15', time:'07:00', group:'E', home:'科特迪瓦', away:'厄瓜多尔', round:1, venue:'费城·林肯金融球场', odds:{spf:'3.20/3.10/2.15', tip:'负', level:'🟠大概率'} },
+  { id:12, date:'2026-06-15', time:'10:00', group:'F', home:'瑞典', away:'突尼斯', round:1, venue:'蒙特雷体育场', odds:{spf:'1.85/3.30/4.20', tip:'胜', level:'🟡稳胆'}, focus:'🔥死亡之组' },
+  { id:13, date:'2026-06-16', time:'00:00', group:'H', home:'西班牙', away:'佛得角', round:1, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'1.06/10.00/30.00', tip:'胜', level:'🟢铁胆'} },
+  { id:14, date:'2026-06-16', time:'03:00', group:'G', home:'比利时', away:'埃及', round:1, venue:'西雅图·Lumen球场', odds:{spf:'1.65/3.70/5.00', tip:'胜', level:'🟡稳胆'} },
+  { id:15, date:'2026-06-16', time:'06:00', group:'H', home:'沙特阿拉伯', away:'乌拉圭', round:1, venue:'迈阿密·硬石体育场', odds:{spf:'6.50/4.00/1.45', tip:'负', level:'🟢铁胆'} },
+  { id:16, date:'2026-06-16', time:'09:00', group:'G', home:'伊朗', away:'新西兰', round:1, venue:'洛杉矶·SoFi体育场', odds:{spf:'1.80/3.30/4.50', tip:'胜', level:'🟡稳胆'}, injury:'伊朗:联赛停摆状态存疑' },
+  { id:17, date:'2026-06-17', time:'03:00', group:'I', home:'法国', away:'塞内加尔', round:1, venue:'纽约·大都会人寿体育场', odds:{spf:'1.55/3.90/5.50', tip:'胜', level:'🟢铁胆'}, focus:'⚡姆巴佩vs马内' },
+  { id:18, date:'2026-06-17', time:'06:00', group:'I', home:'伊拉克', away:'挪威', round:1, venue:'波士顿·吉列体育场', odds:{spf:'7.00/4.20/1.35', tip:'负', level:'🟢铁胆'}, focus:'哈兰德世界杯首秀' },
+  { id:19, date:'2026-06-17', time:'09:00', group:'J', home:'阿根廷', away:'阿尔及利亚', round:1, venue:'堪萨斯城·箭头体育场', odds:{spf:'1.25/5.50/10.00', tip:'胜', level:'🟢铁胆'}, focus:'⭐梅西最后一届首秀' },
+  { id:20, date:'2026-06-17', time:'12:00', group:'J', home:'奥地利', away:'约旦', round:1, venue:'旧金山·Levi\'s体育场', odds:{spf:'1.40/4.20/7.50', tip:'胜', level:'🟢铁胆'} },
+  { id:21, date:'2026-06-18', time:'01:00', group:'K', home:'葡萄牙', away:'民主刚果', round:1, venue:'休斯顿·NRG体育场', odds:{spf:'1.22/5.50/12.00', tip:'胜', level:'🟢铁胆'}, focus:'⭐C罗最后一届首秀' },
+  { id:22, date:'2026-06-18', time:'04:00', group:'L', home:'英格兰', away:'克罗地亚', round:1, venue:'达拉斯·AT&T体育场', odds:{spf:'1.80/3.40/4.20', tip:'胜', level:'🟡稳胆'}, focus:'🔥欧洲强强对话' },
+  { id:23, date:'2026-06-18', time:'07:00', group:'L', home:'加纳', away:'巴拿马', round:1, venue:'多伦多·BMO球场', odds:{spf:'2.10/3.10/3.50', tip:'胜', level:'🟡稳胆'} },
+  { id:24, date:'2026-06-18', time:'10:00', group:'K', home:'乌兹别克斯坦', away:'哥伦比亚', round:1, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'5.50/3.60/1.50', tip:'负', level:'🟢铁胆'} },
+  // === Round 2 ===
+  { id:25, date:'2026-06-19', time:'00:00', group:'A', home:'捷克', away:'南非', round:2, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'1.80/3.30/4.50', tip:'胜', level:'🟡稳胆'} },
+  { id:26, date:'2026-06-19', time:'03:00', group:'B', home:'瑞士', away:'波黑', round:2, venue:'洛杉矶·SoFi体育场', odds:{spf:'1.70/3.50/5.00', tip:'负', level:'🟢铁胆'} },
+  { id:27, date:'2026-06-19', time:'06:00', group:'B', home:'加拿大', away:'卡塔尔', round:2, venue:'温哥华·BC Place', odds:{spf:'1.65/3.60/5.00', tip:'胜', level:'🟢铁胆'} },
+  { id:28, date:'2026-06-19', time:'09:00', group:'A', home:'墨西哥', away:'韩国', round:2, venue:'瓜达拉哈拉体育场', odds:{spf:'2.00/3.10/3.80', tip:'平', level:'🟠大概率'}, focus:'🔥A组头名之争' },
+  { id:29, date:'2026-06-20', time:'03:00', group:'D', home:'美国', away:'澳大利亚', round:2, venue:'西雅图·Lumen球场', odds:{spf:'1.55/3.70/6.00', tip:'胜', level:'🟢铁胆'} },
+  { id:30, date:'2026-06-20', time:'06:00', group:'C', home:'苏格兰', away:'摩洛哥', round:2, venue:'波士顿·吉列体育场', odds:{spf:'3.00/3.10/2.20', tip:'负', level:'🟠大概率'} },
+  { id:31, date:'2026-06-20', time:'09:00', group:'C', home:'巴西', away:'海地', round:2, venue:'费城·林肯金融球场', odds:{spf:'1.06/10.00/30.00', tip:'胜', level:'🟢铁胆'} },
+  { id:32, date:'2026-06-20', time:'12:00', group:'D', home:'土耳其', away:'巴拉圭', round:2, venue:'旧金山·Levi\'s体育场', odds:{spf:'1.95/3.30/3.80', tip:'胜', level:'🟡稳胆'} },
+  { id:33, date:'2026-06-21', time:'01:00', group:'F', home:'荷兰', away:'瑞典', round:2, venue:'达拉斯·AT&T体育场', odds:{spf:'2.00/3.20/3.70', tip:'胜', level:'🟠大概率'}, focus:'🔥死亡之组决战' },
+  { id:34, date:'2026-06-21', time:'04:00', group:'E', home:'德国', away:'科特迪瓦', round:2, venue:'多伦多·BMO球场', odds:{spf:'1.35/4.50/8.00', tip:'胜', level:'🟢铁胆'} },
+  { id:35, date:'2026-06-21', time:'08:00', group:'E', home:'厄瓜多尔', away:'库拉索', round:2, venue:'堪萨斯城·箭头体育场', odds:{spf:'1.30/5.00/9.00', tip:'胜', level:'🟢铁胆'} },
+  { id:36, date:'2026-06-21', time:'12:00', group:'F', home:'突尼斯', away:'日本', round:2, venue:'蒙特雷体育场', odds:{spf:'3.20/3.00/2.40', tip:'负', level:'🟠大概率'}, injury:'日本:三笘薰+南野继续缺阵' },
+  { id:37, date:'2026-06-22', time:'00:00', group:'H', home:'西班牙', away:'沙特阿拉伯', round:2, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'1.12/8.00/18.00', tip:'胜', level:'🟢铁胆'} },
+  { id:38, date:'2026-06-22', time:'03:00', group:'G', home:'比利时', away:'伊朗', round:2, venue:'洛杉矶·SoFi体育场', odds:{spf:'1.55/3.80/6.00', tip:'胜', level:'🟢铁胆'} },
+  { id:39, date:'2026-06-22', time:'06:00', group:'H', home:'乌拉圭', away:'佛得角', round:2, venue:'迈阿密·硬石体育场', odds:{spf:'1.25/5.50/10.00', tip:'负', level:'🟢铁胆'} },
+  { id:40, date:'2026-06-22', time:'09:00', group:'G', home:'新西兰', away:'埃及', round:2, venue:'温哥华·BC Place', odds:{spf:'3.80/3.20/2.10', tip:'负', level:'🟡稳胆'} },
+  { id:41, date:'2026-06-23', time:'01:00', group:'J', home:'阿根廷', away:'奥地利', round:2, venue:'达拉斯·AT&T体育场', odds:{spf:'1.60/3.60/5.50', tip:'胜', level:'🟡稳胆'}, focus:'⭐J组头名之争' },
+  { id:42, date:'2026-06-23', time:'05:00', group:'I', home:'法国', away:'伊拉克', round:2, venue:'费城·林肯金融球场', odds:{spf:'1.08/9.00/25.00', tip:'胜', level:'🟢铁胆'} },
+  { id:43, date:'2026-06-23', time:'08:00', group:'I', home:'挪威', away:'塞内加尔', round:2, venue:'纽约·大都会人寿体育场', odds:{spf:'2.60/3.20/2.60', tip:'平', level:'🟠大概率'}, focus:'⚡哈兰德vs马内' },
+  { id:44, date:'2026-06-23', time:'11:00', group:'J', home:'约旦', away:'阿尔及利亚', round:2, venue:'旧金山·Levi\'s体育场', odds:{spf:'4.50/3.50/1.85', tip:'负', level:'🟡稳胆'} },
+  { id:45, date:'2026-06-24', time:'01:00', group:'K', home:'葡萄牙', away:'乌兹别克斯坦', round:2, venue:'休斯顿·NRG体育场', odds:{spf:'1.18/6.50/15.00', tip:'胜', level:'🟢铁胆'} },
+  { id:46, date:'2026-06-24', time:'04:00', group:'L', home:'英格兰', away:'加纳', round:2, venue:'波士顿·吉列体育场', odds:{spf:'1.35/4.50/8.00', tip:'胜', level:'🟢铁胆'} },
+  { id:47, date:'2026-06-24', time:'07:00', group:'L', home:'巴拿马', away:'克罗地亚', round:2, venue:'多伦多·BMO球场', odds:{spf:'5.50/3.50/1.45', tip:'负', level:'🟢铁胆'} },
+  { id:48, date:'2026-06-24', time:'10:00', group:'K', home:'哥伦比亚', away:'民主刚果', round:2, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'1.50/3.80/6.50', tip:'负', level:'🟢铁胆'} }
+];
+
+// Tournament start
+const KICKOFF = new Date('2026-06-12T03:00:00+08:00');
+
+// ============ HELPERS ============
+function flag(team) { return FLAGS[team] || '🏳️'; }
+function groupColor(g) { return GROUPS[g]?.color || '#888'; }
+
+function formatDate(d) {
+  const days = ['周日','周一','周二','周三','周四','周五','周六'];
+  const dt = new Date(d + 'T00:00:00+08:00');
+  return `${d} ${days[dt.getDay()]}`;
+}
+
+// ============ COUNTDOWN ============
+function updateCountdown() {
+  const now = new Date();
+  const diff = KICKOFF - now;
+  if (diff <= 0) {
+    document.getElementById('countdown').innerHTML = '<div class="cd-item"><div class="num">🏟️</div><div class="label">世界杯已开赛！</div></div>';
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').innerHTML = `
+    <div class="cd-item"><div class="num">${d}</div><div class="label">天</div></div>
+    <div class="cd-item"><div class="num">${String(h).padStart(2,'0')}</div><div class="label">时</div></div>
+    <div class="cd-item"><div class="num">${String(m).padStart(2,'0')}</div><div class="label">分</div></div>
+    <div class="cd-item"><div class="num">${String(s).padStart(2,'0')}</div><div class="label">秒</div></div>
+  `;
+}
+setInterval(updateCountdown, 1000);
+updateCountdown();
+
+// ============ RENDER ============
+let currentView = 'schedule';
+let dateFilter = 'all';
+let groupFilter = 'all';
+let teamFilter = '';
+
+function getFilteredMatches() {
+  return MATCHES.filter(m => {
+    if (dateFilter !== 'all' && m.date !== dateFilter) return false;
+    if (groupFilter !== 'all' && m.group !== groupFilter) return false;
+    if (teamFilter && !m.home.includes(teamFilter) && !m.away.includes(teamFilter)) return false;
+    return true;
+  });
+}
+
+function renderSchedule() {
+  const matches = getFilteredMatches();
+  if (matches.length === 0) return '<div style="text-align:center;padding:40px;color:var(--muted)">没有匹配的比赛</div>';
+
+  let html = '';
+  let lastDate = '';
+  const today = new Date().toISOString().slice(0,10);
+
+  for (const m of matches) {
+    if (m.date !== lastDate) {
+      const isToday = m.date === today;
+      html += `<div class="date-header">
+        ${formatDate(m.date)} ${isToday ? '🔴 今天' : ''}
+        <span class="round-badge">第${m.round}轮</span>
+      </div>`;
+      lastDate = m.date;
+    }
+    const isFocus = m.focus ? ' with-odds' : '';
+    html += `<div class="match-card${isFocus}" onclick="showMatch(${m.id})" data-match-id="${m.id}">
+      <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
+      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.level||''} ${m.focus||''}</div>
+      ${m.odds ? `<div class="odds-row">
+        <span><span class="odds-tag">SPF</span> ${m.odds.spf}</span>
+        <span>🎯 ${m.odds.tip}</span>
+        ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
+      </div>` : ''}
+      <div class="venue">📍 ${m.venue}</div>
+    </div>`;
+  }
+  return html;
+}
+
+function renderToday() {
+  const today = new Date().toISOString().slice(0,10);
+  const todayMatches = MATCHES.filter(m => m.date === today);
+  if (todayMatches.length === 0) {
+    // Find next match day
+    const future = MATCHES.filter(m => m.date > today);
+    const nextDate = future.length > 0 ? future[0].date : MATCHES[MATCHES.length-1].date;
+    const nextMatches = MATCHES.filter(m => m.date === nextDate);
+    return `<div style="text-align:center;padding:20px;color:var(--muted)">
+      <p style="font-size:1.2em">📅 今天没有比赛</p>
+      <p style="margin-top:12px">下一比赛日：<strong style="color:var(--accent)">${formatDate(nextDate)}</strong>（${nextMatches.length}场）</p>
+      <div style="margin-top:20px">${nextMatches.map(m => `
+        <div class="match-card" onclick="showMatch(${m.id})" style="grid-template-columns:40px 1fr auto 1fr 60px">
+          <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
+          <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+          <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
+          <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+          <div style="font-size:0.75em;color:var(--accent)">${m.focus||''}</div>
+        </div>`).join('')}</div>
+    </div>`;
+  }
+  return `<h3 style="color:var(--accent);margin-bottom:12px">🔴 今日 ${todayMatches.length} 场比赛</h3>` +
+    todayMatches.map(m => `
+    <div class="match-card with-odds" onclick="showMatch(${m.id})">
+      <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
+      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div style="text-align:center"><span style="background:var(--accent);color:#000;padding:2px 10px;border-radius:10px;font-size:0.8em;font-weight:700">${m.odds?.tip||''}</span></div>
+      ${m.odds ? `<div class="odds-row"><span>🏆 SPF: ${m.odds.spf}</span><span>⭐ ${m.level}</span>${m.injury?`<span>⚠️ ${m.injury}</span>`:''}</div>` : ''}
+      <div class="venue">📍 ${m.venue} ${m.focus||''}</div>
+    </div>`).join('');
+}
+
+function renderGroups() {
+  let html = '<div class="groups-grid">';
+  for (const [g, info] of Object.entries(GROUPS)) {
+    html += `<div class="group-card" style="border-top-color:${info.color}">
+      <h3><span>${info.name}</span><span style="color:${info.color}">▼</span></h3>
+      <table>
+        <tr><th>#</th><th>球队</th><th style="text-align:center">赛</th><th style="text-align:center">胜</th><th style="text-align:center">平</th><th style="text-align:center">负</th><th style="text-align:center">积分</th></tr>`;
+    info.teams.forEach((t, i) => {
+      const cls = i < 2 ? 'q' : (i === 2 ? 'po' : '');
+      html += `<tr>
+        <td><span class="rank ${cls}">${i+1}</span></td>
+        <td>${flag(t)} ${t}</td>
+        <td style="text-align:center;color:var(--muted)">0</td>
+        <td style="text-align:center;color:var(--muted)">0</td>
+        <td style="text-align:center;color:var(--muted)">0</td>
+        <td style="text-align:center;color:var(--muted)">0</td>
+        <td style="text-align:center;font-weight:700">0</td>
+      </tr>`;
+    });
+    html += '</table></div>';
+  }
+  html += '</div>';
+  html += `<p style="text-align:center;color:var(--muted);margin-top:16px;font-size:0.85em">
+    🟢 前2名直接晋级 | 🟡 第3名有望争8个最佳第三 | 赛前初始排序
+  </p>`;
+  return html;
+}
+
+function renderFocus() {
+  const focusMatches = [
+    { title:'🎬 揭幕战', match:1, desc:'墨西哥高原主场迎战南非，世界杯正式开打！' },
+    { title:'⭐ 梅西最后一届首秀', match:19, desc:'6月17日09:00，阿根廷vs阿尔及利亚，39岁的梅西开启谢幕之旅' },
+    { title:'⭐ C罗最后一届首秀', match:21, desc:'6月18日01:00，葡萄牙vs民主刚果，C罗的世界杯终章' },
+    { title:'🔥 欧洲强强对话', match:22, desc:'6月18日04:00，英格兰vs克罗地亚，欧洲杯亚军vs世界杯季军' },
+    { title:'⚡ 姆巴佩vs马内', match:17, desc:'6月17日03:00，法国vs塞内加尔，非洲最强挑战世界冠军' },
+    { title:'🔥 死亡之组F组', match:33, desc:'6月21日01:00，荷兰vs瑞典，F组最强对话决定出线格局' },
+    { title:'⚡ 哈兰德vs非洲冠军', match:43, desc:'6月23日08:00，挪威vs塞内加尔，哈兰德世界杯大考' },
+    { title:'⭐ 阿根廷关键战', match:41, desc:'6月23日01:00，阿根廷vs奥地利，梅西vs朗尼克体系' },
+    { title:'🏟️ 东道主首秀', match:4, desc:'6月13日09:00，美国vs巴拉圭，洛杉矶SoFi主场' },
+    { title:'🇧🇷 桑巴军团首秀', match:6, desc:'6月14日06:00，巴西vs摩洛哥，2022四强重赛' }
+  ];
+  return focusMatches.map(f => {
+    const m = MATCHES.find(x => x.id === f.match);
+    if (!m) return '';
+    return `<div class="match-card with-odds" onclick="showMatch(${m.id})" style="margin-bottom:8px">
+      <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
+      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div style="font-size:0.75em;color:var(--gold);text-align:center">${f.title}</div>
+      <div style="grid-column:1/-1;font-size:0.85em;color:var(--muted);padding:4px 0">
+        📅 ${formatDate(m.date)} | 🏟️ ${m.venue}<br>${f.desc}
+      </div>
+      ${m.odds ? `<div class="odds-row"><span>🏆 ${m.odds.tip} | SPF ${m.odds.spf}</span><span>${m.level}</span></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderAnalysis() {
+  return `<div style="background:var(--card);border-radius:16px;padding:24px;border:1px solid var(--border)">
+    <h2 style="color:var(--accent);margin-bottom:16px">🤖 AI投注分析功能</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px,1fr));gap:12px">
+      <div style="background:rgba(0,212,170,0.08);border-radius:12px;padding:16px;border:1px solid rgba(0,212,170,0.15)">
+        <h4>🏆 冠军预测</h4>
+        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">西班牙 4.75 | 法国 5.00 | 阿根廷 8.50 | 英格兰 5.00</p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请在微信中向机器人发送「冠军分析」')" style="color:var(--accent)">→ 获取深度分析</a></p>
+      </div>
+      <div style="background:rgba(245,197,66,0.08);border-radius:12px;padding:16px;border:1px solid rgba(245,197,66,0.15)">
+        <h4>📅 每日推荐</h4>
+        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">每天自动分析当日所有场次，SPF+让球+总进球+半全场+比分</p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请在微信中向机器人发送「今日推荐」')" style="color:var(--gold)">→ 查看今日推荐</a></p>
+      </div>
+      <div style="background:rgba(52,152,219,0.08);border-radius:12px;padding:16px;border:1px solid rgba(52,152,219,0.15)">
+        <h4>🔢 串关计算器</h4>
+        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">输入投注金额+所选场次，自动计算最大收益和保本条件</p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('即将上线！')" style="color:#3498db">→ 即将上线</a></p>
+      </div>
+      <div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:16px;border:1px solid rgba(231,76,60,0.15)">
+        <h4>📄 完整方案下载</h4>
+        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">前2期48场全玩法分析PDF，含500/1000元两档预算方案</p>
+        <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请联系微信获取完整方案')" style="color:#e74c3c">→ 获取完整方案</a></p>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px">
+      <h4 style="margin-bottom:8px">📊 前2期48场统计</h4>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.9em">
+        <span>🟢 铁胆级: <strong style="color:var(--accent)">27场</strong> (56%)</span>
+        <span>🟡 稳胆级: <strong style="color:var(--gold)">13场</strong> (27%)</span>
+        <span>🟠 大概率: <strong style="color:#e67e22">8场</strong> (17%)</span>
+        <span>💰 总场次: <strong>48场</strong></span>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:0.8em;color:var(--muted);text-align:center">
+      ⚠️ 以上赔率为国际盘口换算预估，实际以竞彩出票为准 | 理性购彩 | 唯一合法渠道：中国体育彩票线下实体店 95086
+    </p>
+  </div>`;
+}
+
+function showMatch(id) {
+  const m = MATCHES.find(x => x.id === id);
+  if (!m) return;
+  const tips = {
+    '胜':'主队赢球 (3)', '平':'双方打平 (1)', '负':'客队赢球 (0)'
+  };
+  document.getElementById('modalContent').innerHTML = `
+    <h2>${flag(m.home)} ${m.home} VS ${m.away} ${flag(m.away)}</h2>
+    <div class="m-detail">📅 ${formatDate(m.date)} ${m.time} 北京时间</div>
+    <div class="m-detail">🏟️ ${m.venue}</div>
+    <div class="m-detail">📊 ${GROUPS[m.group].name} · 第${m.round}轮 ${m.focus||''}</div>
+    ${m.injury ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
+    <div class="prediction">
+      <h4>🤖 AI推荐</h4>
+      <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'} ${tips[m.odds?.tip]||''}</span></div>
+      <div class="bet-row"><span>胜平负SPF</span><span>${m.odds?.spf||'待开售'}</span></div>
+      <div class="bet-row"><span>信心等级</span><span>${m.level||'—'}</span></div>
+      <div class="bet-row"><span>总进球推荐</span><span>2球 / 3球</span></div>
+      <div class="bet-row"><span>半全场推荐</span><span>胜-胜 / 平-胜</span></div>
+      ${m.odds?.tip==='胜'||m.odds?.tip==='负' ? `<div class="bet-row"><span>比分推荐</span><span>2:0 / 3:0</span></div>` : `<div class="bet-row"><span>比分推荐</span><span>1:1 / 1:0</span></div>`}
+      <p style="font-size:0.75em;color:var(--muted);margin-top:8px">⚠️ 赔率为国际盘口换算预估，实际以竞彩出票为准</p>
+    </div>
+    <button class="close" onclick="closeModal()">关闭</button>
+  `;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ============ MAIN RENDER ============
+function render(view) {
+  currentView = view;
+  let html = '';
+
+  if (view === 'schedule') {
+    // Filters
+    const dates = [...new Set(MATCHES.map(m => m.date))];
+    html += `<div class="filters">
+      <select id="dateFilter" onchange="dateFilter=this.value;render(currentView)">
+        <option value="all">📅 全部日期</option>
+        ${dates.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('')}
+      </select>
+      <select id="groupFilter" onchange="groupFilter=this.value;render(currentView)">
+        <option value="all">📊 全部小组</option>
+        ${Object.entries(GROUPS).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('')}
+      </select>
+      <input id="teamFilter" type="text" placeholder="🔍 搜索球队..." oninput="teamFilter=this.value;render(currentView)">
+      <button class="ai-badge" onclick="render('analysis')">🤖 AI分析</button>
+    </div>`;
+    html += '<div class="match-list">' + renderSchedule() + '</div>';
+  } else if (view === 'today') {
+    html += renderToday();
+  } else if (view === 'groups') {
+    html += renderGroups();
+  } else if (view === 'focus') {
+    html += '<h3 style="margin-bottom:12px">⭐ 本届世界杯10大必看焦点战</h3>' + renderFocus();
+  } else if (view === 'analysis') {
+    html += renderAnalysis();
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+
+  // Set filter values back after re-render
+  if (view === 'schedule') {
+    const df = document.getElementById('dateFilter');
+    const gf = document.getElementById('groupFilter');
+    const tf = document.getElementById('teamFilter');
+    if (df) df.value = dateFilter;
+    if (gf) gf.value = groupFilter;
+    if (tf) tf.value = teamFilter;
+  }
+}
+
+// Nav click
+document.getElementById('navTabs').addEventListener('click', function(e) {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#navTabs button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    render(e.target.dataset.view);
+  }
+});
+
+// Init
+render('schedule');
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "updated": "2026-06-06T00:00:00+08:00",
+  "source": "竞彩网 sporttery.cn + 国际盘口换算",
+  "champion_odds": [
+    {"team": "西班牙", "flag": "🇪🇸", "odds": 4.75, "trend": "↓"},
+    {"team": "法国", "flag": "🇫🇷", "odds": 5.00, "trend": "→"},
+    {"team": "英格兰", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "odds": 5.00, "trend": "→"},
+    {"team": "葡萄牙", "flag": "🇵🇹", "odds": 5.75, "trend": "↓"},
+    {"team": "巴西", "flag": "🇧🇷", "odds": 7.00, "trend": "→"},
+    {"team": "阿根廷", "flag": "🇦🇷", "odds": 8.50, "trend": "→"},
+    {"team": "德国", "flag": "🇩🇪", "odds": 10.50, "trend": "→"},
+    {"team": "荷兰", "flag": "🇳🇱", "odds": 15.00, "trend": "→"}
+  ],
+  "runnerup_odds": [
+    {"combo": "西班牙+法国", "odds": 14.00},
+    {"combo": "西班牙+英格兰", "odds": 11.50},
+    {"combo": "法国+英格兰", "odds": 11.50},
+    {"combo": "西班牙+葡萄牙", "odds": 15.00},
+    {"combo": "法国+阿根廷", "odds": 31.00}
+  ],
+  "today_analysis": [],
+  "daily_tips": [],
+  "hot_matches": [
+    {"id": 19, "reason": "梅西最后一届首秀"},
+    {"id": 21, "reason": "C罗最后一届首秀"},
+    {"id": 22, "reason": "欧洲强强对话"},
+    {"id": 17, "reason": "姆巴佩vs马内"},
+    {"id": 33, "reason": "死亡之组决战"}
+  ]
+}
