@@ -756,7 +756,7 @@ function render(view) {
   if (view === 'schedule') {
     // Build filter bar (persistent, not re-rendered on search)
     const dates = [...new Set(MATCHES.map(m => m.date))];
-    const levels = ['🟢铁胆','🟡稳胆','🟠大概率','⏳第3轮','🔮淘汰赛'];
+    const levels = ['🟢铁胆','🟡稳胆','🟠大概率'];
     document.getElementById('filterBar').innerHTML = `
       <select id="dateFilter" onchange="applyFilters()">
         <option value="all">📅 全部日期</option>
