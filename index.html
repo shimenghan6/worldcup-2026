@@ -208,6 +208,9 @@ body {
 </nav>
 
 <!-- Main Content -->
+<div id="dataFreshness" style="text-align:center;padding:8px;font-size:0.8em;background:rgba(245,197,66,0.1);border-bottom:1px solid var(--border);color:var(--muted)">
+  <span id="freshnessText">📡 数据加载中...</span>
+</div>
 <div class="container" id="mainContent"></div>
 
 <!-- Match Detail Modal -->
@@ -313,6 +316,69 @@ const MATCHES = [
 // Tournament start
 const KICKOFF = new Date('2026-06-12T03:00:00+08:00');
 
+// ============ DYNAMIC DATA LOADING ============
+let LIVE_DATA = null;
+let DATA_SOURCE = '内置预估数据';
+let DATA_UPDATED = '2026-06-06 (发布日)';
+
+async function loadLiveData() {
+  try {
+    const resp = await fetch('data.json?t=' + Date.now());
+    if (resp.ok) {
+      LIVE_DATA = await resp.json();
+      DATA_SOURCE = LIVE_DATA.source || '竞彩网+AI分析';
+      DATA_UPDATED = LIVE_DATA.updated || '未知';
+      console.log('✅ 实时数据加载成功:', DATA_UPDATED);
+    }
+  } catch(e) {
+    console.log('⚠️ 使用内置预估数据 (data.json 未加载)');
+    LIVE_DATA = null;
+  }
+  updateFreshness();
+}
+
+function updateFreshness() {
+  const el = document.getElementById('freshnessText');
+  const now = new Date();
+  let updateDate;
+  try { updateDate = new Date(DATA_UPDATED); } catch(e) { updateDate = now; }
+  const hoursAgo = Math.floor((now - updateDate) / 3600000);
+
+  let status, color;
+  if (LIVE_DATA && hoursAgo < 6) {
+    status = `🟢 实时数据 | 更新于 ${DATA_UPDATED} | 来源: ${DATA_SOURCE}`;
+    color = '#00d4aa';
+  } else if (LIVE_DATA && hoursAgo < 24) {
+    status = `🟡 今日数据 | 更新于 ${DATA_UPDATED} (${hoursAgo}小时前) | 来源: ${DATA_SOURCE}`;
+    color = '#f5c542';
+  } else if (LIVE_DATA) {
+    status = `🟠 数据已过时 | 更新于 ${DATA_UPDATED} (${hoursAgo}小时前) | 建议刷新`;
+    color = '#e67e22';
+  } else {
+    status = `🔴 离线模式 | 数据为发布日预估 | 每日8:57自动更新`;
+    color = '#ff4757';
+    DATA_UPDATED = '2026-06-06 (发布日静态数据)';
+  }
+  el.innerHTML = status;
+  el.style.color = color;
+}
+
+function mergeLiveData() {
+  if (!LIVE_DATA || !LIVE_DATA.matches) return;
+  for (const live of LIVE_DATA.matches) {
+    const m = MATCHES.find(x => x.id === live.id);
+    if (!m) continue;
+    if (live.spf) m.odds.spf = live.spf;
+    if (live.tip) m.odds.tip = live.tip;
+    if (live.level) m.odds.level = live.level;
+    if (live.totalGoals) m.odds.totalGoals = live.totalGoals;
+    if (live.htft) m.odds.htft = live.htft;
+    if (live.score) m.odds.score = live.score;
+    if (live.injury) m.injury = live.injury;
+    if (live.news) m.news = live.news;
+  }
+}
+
 // ============ HELPERS ============
 function flag(team) { return FLAGS[team] || '🏳️'; }
 function groupColor(g) { return GROUPS[g]?.color || '#888'; }
@@ -383,7 +449,7 @@ function renderSchedule() {
       <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
-      <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.level||''} ${m.focus||''}</div>
+      <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
       ${m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf}</span>
         <span>🎯 ${m.odds.tip}</span>
@@ -424,7 +490,7 @@ function renderToday() {
       <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
       <div style="text-align:center"><span style="background:var(--accent);color:#000;padding:2px 10px;border-radius:10px;font-size:0.8em;font-weight:700">${m.odds?.tip||''}</span></div>
-      ${m.odds ? `<div class="odds-row"><span>🏆 SPF: ${m.odds.spf}</span><span>⭐ ${m.level}</span>${m.injury?`<span>⚠️ ${m.injury}</span>`:''}</div>` : ''}
+      ${m.odds ? `<div class="odds-row"><span>🏆 SPF: ${m.odds.spf}</span><span>⭐ ${m.odds.level||''}</span>${m.injury?`<span>⚠️ ${m.injury}</span>`:''}</div>` : ''}
       <div class="venue">📍 ${m.venue} ${m.focus||''}</div>
     </div>`).join('');
 }
@@ -482,7 +548,7 @@ function renderFocus() {
       <div style="grid-column:1/-1;font-size:0.85em;color:var(--muted);padding:4px 0">
         📅 ${formatDate(m.date)} | 🏟️ ${m.venue}<br>${f.desc}
       </div>
-      ${m.odds ? `<div class="odds-row"><span>🏆 ${m.odds.tip} | SPF ${m.odds.spf}</span><span>${m.level}</span></div>` : ''}
+      ${m.odds ? `<div class="odds-row"><span>🏆 ${m.odds.tip} | SPF ${m.odds.spf}</span><span>${m.odds.level||''}</span></div>` : ''}
     </div>`;
   }).join('');
 }
@@ -530,9 +596,11 @@ function renderAnalysis() {
 function showMatch(id) {
   const m = MATCHES.find(x => x.id === id);
   if (!m) return;
+  // 竞彩编码: 3=主胜 1=平 0=客胜 (中国体彩行业标准)
   const tips = {
-    '胜':'主队赢球 (3)', '平':'双方打平 (1)', '负':'客队赢球 (0)'
+    '胜':'主队赢球', '平':'双方打平', '负':'客队赢球'
   };
+  const codeMap = {'胜':'3', '平':'1', '负':'0'};
   document.getElementById('modalContent').innerHTML = `
     <h2>${flag(m.home)} ${m.home} VS ${m.away} ${flag(m.away)}</h2>
     <div class="m-detail">📅 ${formatDate(m.date)} ${m.time} 北京时间</div>
@@ -541,9 +609,9 @@ function showMatch(id) {
     ${m.injury ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
     <div class="prediction">
       <h4>🤖 AI推荐</h4>
-      <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'} ${tips[m.odds?.tip]||''}</span></div>
+      <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'}（${tips[m.odds?.tip]||''}）</span><span style="font-size:0.7em;color:var(--muted)">竞彩编码:${codeMap[m.odds?.tip]||'—'}</span></div>
       <div class="bet-row"><span>胜平负SPF</span><span>${m.odds?.spf||'待开售'}</span></div>
-      <div class="bet-row"><span>信心等级</span><span>${m.level||'—'}</span></div>
+      <div class="bet-row"><span>信心等级</span><span>${m.odds?.level||'—'}</span></div>
       <div class="bet-row"><span>总进球推荐</span><span>2球 / 3球</span></div>
       <div class="bet-row"><span>半全场推荐</span><span>胜-胜 / 平-胜</span></div>
       ${m.odds?.tip==='胜'||m.odds?.tip==='负' ? `<div class="bet-row"><span>比分推荐</span><span>2:0 / 3:0</span></div>` : `<div class="bet-row"><span>比分推荐</span><span>1:1 / 1:0</span></div>`}
@@ -611,8 +679,13 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
   }
 });
 
-// Init
-render('schedule');
+// Init (data loads async, then renders)
+(async function init() {
+  await loadLiveData();
+  mergeLiveData();
+  updateFreshness();
+  render('schedule');
+})();
 </script>
 </body>
 </html>
