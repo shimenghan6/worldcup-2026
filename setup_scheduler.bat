@@ -7,7 +7,7 @@ echo.
 :: 创建每2小时运行一次的任务
 schtasks /create /tn "WorldCupOddsFetch" ^
   /tr "python C:\Users\shish\github-repos\worldcup-2026\fetch_odds.py" ^
-  /sc hourly /mo 2 ^
+  /sc hourly /mo 1 ^
   /st 00:00 ^
   /f
 

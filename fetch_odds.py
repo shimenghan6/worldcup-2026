@@ -1,6 +1,6 @@
 """
 世界杯赔率自动抓取脚本 - 零Token方案
-每2小时运行一次,通过CDP协议操控Edge浏览器抓取sporttery.cn赔率
+每小时运行一次,通过CDP协议操控Edge浏览器抓取sporttery.cn赔率
 独立于Claude,不消耗AI token
 
 用法:
