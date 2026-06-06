@@ -37,11 +37,34 @@ npx serve .
 python -m http.server 8080
 ```
 
+## 🤖 自动化数据更新
+
+```
+🐍 Python每小时 → 自动启动浏览器 → 抓取竞彩网赔率 → git push
+🧠 Claude每天8:03 → 搜索伤病情报 → 重新评估预测 → 校验 → git push
+                     ↓
+            GitHub Pages 自动部署
+```
+
+### 一键安装（Windows）
+
+双击 `setup_scheduler.bat` →
+- 自动安装依赖
+- 创建每小时定时任务
+- 浏览器自动启动(支持Chrome/Edge)，无需手动操作
+
+### 手动运行
+
+```bash
+python fetch_odds.py              # 全自动抓取+更新+推送
+python fetch_odds.py --headless   # 无窗口模式(后台静默运行)
+python fetch_odds.py --dry-run    # 仅测试不推送
+```
+
 ## 🤖 AI分析引擎
 
-本项目配套 [lottery-analyzer](https://github.com) skill：
+配套 [lottery-analyzer](https://github.com) skill：
 
-- 每天自动抓取竞彩网实时赔率
 - 搜索球队伤病/阵容/状态
 - 生成每场全玩法（SPF+让球+总进球+半全场+比分）分析
 - 输出500/1000元两档投注方案
