@@ -193,8 +193,8 @@ body {
 <!-- Hero -->
 <div class="hero">
   <h1>🏆 2026 美加墨世界杯</h1>
-  <div class="subtitle">FIFA World Cup 2026 · 48队 · 104场 · 首次扩军</div>
-  <div class="dates">🇨🇦 加拿大 · 🇲🇽 墨西哥 · 🇺🇸 美国 | 6月12日 - 7月20日（北京时间）</div>
+  <div class="subtitle">FIFA World Cup 2026 · 48队12组 · 104场全赛程 · 小组赛→决赛</div>
+  <div class="dates">🇨🇦 加拿大 · 🇲🇽 墨西哥 · 🇺🇸 美国 | 6月12日揭幕 → 7月20日决赛（北京时间）</div>
   <div class="countdown-bar" id="countdown"></div>
 </div>
 
@@ -241,7 +241,14 @@ const GROUPS = {
   I: { name:'I组', color:'#ff6f00', teams:['法国','塞内加尔','伊拉克','挪威'] },
   J: { name:'J组', color:'#00bcd4', teams:['阿根廷','阿尔及利亚','奥地利','约旦'] },
   K: { name:'K组', color:'#8bc34a', teams:['葡萄牙','民主刚果','乌兹别克斯坦','哥伦比亚'] },
-  L: { name:'L组', color:'#ff4081', teams:['英格兰','克罗地亚','加纳','巴拿马'] }
+  L: { name:'L组', color:'#ff4081', teams:['英格兰','克罗地亚','加纳','巴拿马'] },
+  KO: { name:'淘汰赛', color:'#f5c542', teams:[] }
+};
+
+const ROUND_NAMES = {
+  1:'第1轮', 2:'第2轮', 3:'第3轮',
+  'R32':'32强赛', 'R16':'16强赛', 'QF':'1/4决赛',
+  'SF':'半决赛', '3RD':'季军赛', 'FINAL':'🏆决赛'
 };
 
 const FLAGS = {
@@ -310,7 +317,70 @@ const MATCHES = [
   { id:45, date:'2026-06-24', time:'01:00', group:'K', home:'葡萄牙', away:'乌兹别克斯坦', round:2, venue:'休斯顿·NRG体育场', odds:{spf:'1.18/6.50/15.00', tip:'胜', level:'🟢铁胆'} },
   { id:46, date:'2026-06-24', time:'04:00', group:'L', home:'英格兰', away:'加纳', round:2, venue:'波士顿·吉列体育场', odds:{spf:'1.35/4.50/8.00', tip:'胜', level:'🟢铁胆'} },
   { id:47, date:'2026-06-24', time:'07:00', group:'L', home:'巴拿马', away:'克罗地亚', round:2, venue:'多伦多·BMO球场', odds:{spf:'5.50/3.50/1.45', tip:'负', level:'🟢铁胆'} },
-  { id:48, date:'2026-06-24', time:'10:00', group:'K', home:'哥伦比亚', away:'民主刚果', round:2, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'1.50/3.80/6.50', tip:'负', level:'🟢铁胆'} }
+  { id:48, date:'2026-06-24', time:'10:00', group:'K', home:'哥伦比亚', away:'民主刚果', round:2, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'1.50/3.80/6.50', tip:'负', level:'🟢铁胆'} },
+  // === Round 3 (小组赛末轮, 同组同时开球) ===
+  { id:49, date:'2026-06-25', time:'03:00', group:'B', home:'瑞士', away:'加拿大', round:3, venue:'温哥华·BC Place', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'B组出线决战' },
+  { id:50, date:'2026-06-25', time:'03:00', group:'B', home:'波黑', away:'卡塔尔', round:3, venue:'西雅图·Lumen球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:51, date:'2026-06-25', time:'06:00', group:'C', home:'苏格兰', away:'巴西', round:3, venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥巴西关键战' },
+  { id:52, date:'2026-06-25', time:'06:00', group:'C', home:'摩洛哥', away:'海地', round:3, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:53, date:'2026-06-25', time:'09:00', group:'A', home:'捷克', away:'墨西哥', round:3, venue:'墨西哥城·阿兹特克体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'A组出线决战' },
+  { id:54, date:'2026-06-25', time:'09:00', group:'A', home:'南非', away:'韩国', round:3, venue:'蒙特雷体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:55, date:'2026-06-26', time:'04:00', group:'E', home:'厄瓜多尔', away:'德国', round:3, venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'E组头名战' },
+  { id:56, date:'2026-06-26', time:'04:00', group:'E', home:'库拉索', away:'科特迪瓦', round:3, venue:'费城·林肯金融球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:57, date:'2026-06-26', time:'07:00', group:'F', home:'日本', away:'瑞典', round:3, venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥死亡之组终局' },
+  { id:58, date:'2026-06-26', time:'07:00', group:'F', home:'突尼斯', away:'荷兰', round:3, venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:59, date:'2026-06-26', time:'10:00', group:'D', home:'土耳其', away:'美国', round:3, venue:'洛杉矶·SoFi体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'D组头名战' },
+  { id:60, date:'2026-06-26', time:'10:00', group:'D', home:'巴拉圭', away:'澳大利亚', round:3, venue:'旧金山·Levi\'s体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:61, date:'2026-06-27', time:'03:00', group:'I', home:'挪威', away:'法国', round:3, venue:'波士顿·吉列体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'⚡哈兰德vs姆巴佩' },
+  { id:62, date:'2026-06-27', time:'03:00', group:'I', home:'塞内加尔', away:'伊拉克', round:3, venue:'多伦多·BMO球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:63, date:'2026-06-27', time:'08:00', group:'H', home:'佛得角', away:'沙特阿拉伯', round:3, venue:'休斯顿·NRG体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:64, date:'2026-06-27', time:'08:00', group:'H', home:'乌拉圭', away:'西班牙', round:3, venue:'瓜达拉哈拉体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥H组冠军战' },
+  { id:65, date:'2026-06-27', time:'11:00', group:'G', home:'新西兰', away:'比利时', round:3, venue:'温哥华·BC Place', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:66, date:'2026-06-27', time:'11:00', group:'G', home:'埃及', away:'伊朗', round:3, venue:'西雅图·Lumen球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:67, date:'2026-06-28', time:'05:00', group:'L', home:'巴拿马', away:'英格兰', round:3, venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:68, date:'2026-06-28', time:'05:00', group:'L', home:'克罗地亚', away:'加纳', round:3, venue:'费城·林肯金融球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:69, date:'2026-06-28', time:'07:30', group:'K', home:'哥伦比亚', away:'葡萄牙', round:3, venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'⭐C罗小组终战' },
+  { id:70, date:'2026-06-28', time:'07:30', group:'K', home:'民主刚果', away:'乌兹别克斯坦', round:3, venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:71, date:'2026-06-28', time:'10:00', group:'J', home:'阿尔及利亚', away:'奥地利', round:3, venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:72, date:'2026-06-28', time:'10:00', group:'J', home:'约旦', away:'阿根廷', round:3, venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'⭐梅西小组终战' },
+  // === 淘汰赛 1/16决赛 (32强) ===
+  { id:73, date:'2026-06-29', time:'待定', group:'KO', home:'A组第2', away:'B组第2', round:'R32', venue:'洛杉矶·SoFi体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:74, date:'2026-06-30', time:'待定', group:'KO', home:'E组第1', away:'第3(A/B/C/D)', round:'R32', venue:'波士顿·吉列体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:75, date:'2026-06-30', time:'待定', group:'KO', home:'F组第1', away:'C组第2', round:'R32', venue:'蒙特雷体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:76, date:'2026-06-30', time:'待定', group:'KO', home:'C组第1', away:'F组第2', round:'R32', venue:'休斯顿·NRG体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:77, date:'2026-07-01', time:'待定', group:'KO', home:'I组第1', away:'第3(E/F/G/H)', round:'R32', venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:78, date:'2026-07-01', time:'待定', group:'KO', home:'E组第2', away:'I组第2', round:'R32', venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:79, date:'2026-07-01', time:'待定', group:'KO', home:'A组第1', away:'第3(C/D/E/F)', round:'R32', venue:'墨西哥城·阿兹特克体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:80, date:'2026-07-02', time:'待定', group:'KO', home:'L组第1', away:'第3(I/J/K/L)', round:'R32', venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:81, date:'2026-07-02', time:'待定', group:'KO', home:'D组第1', away:'第3(B/E/F/G)', round:'R32', venue:'旧金山·Levi\'s体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:82, date:'2026-07-02', time:'待定', group:'KO', home:'G组第1', away:'第3(A/E/H/I)', round:'R32', venue:'西雅图·Lumen球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:83, date:'2026-07-03', time:'待定', group:'KO', home:'K组第2', away:'L组第2', round:'R32', venue:'多伦多·BMO球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:84, date:'2026-07-03', time:'待定', group:'KO', home:'H组第1', away:'J组第2', round:'R32', venue:'洛杉矶·SoFi体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:85, date:'2026-07-03', time:'待定', group:'KO', home:'B组第1', away:'第3(E/F/G/H)', round:'R32', venue:'温哥华·BC Place', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:86, date:'2026-07-04', time:'待定', group:'KO', home:'J组第1', away:'H组第2', round:'R32', venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:87, date:'2026-07-04', time:'待定', group:'KO', home:'K组第1', away:'第3(D/E/I/J)', round:'R32', venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:88, date:'2026-07-04', time:'待定', group:'KO', home:'D组第2', away:'G组第2', round:'R32', venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  // === 1/8决赛 (16强) ===
+  { id:89, date:'2026-07-05', time:'待定', group:'KO', home:'R32-73胜者', away:'R32-74胜者', round:'R16', venue:'费城·林肯金融球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:90, date:'2026-07-05', time:'待定', group:'KO', home:'R32-76胜者', away:'R32-75胜者', round:'R16', venue:'休斯顿·NRG体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:91, date:'2026-07-06', time:'待定', group:'KO', home:'R32-77胜者', away:'R32-78胜者', round:'R16', venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:92, date:'2026-07-06', time:'待定', group:'KO', home:'R32-79胜者', away:'R32-80胜者', round:'R16', venue:'墨西哥城·阿兹特克体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:93, date:'2026-07-07', time:'待定', group:'KO', home:'R32-82胜者', away:'R32-81胜者', round:'R16', venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:94, date:'2026-07-07', time:'待定', group:'KO', home:'R32-84胜者', away:'R32-83胜者', round:'R16', venue:'西雅图·Lumen球场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:95, date:'2026-07-08', time:'待定', group:'KO', home:'R32-85胜者', away:'R32-86胜者', round:'R16', venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:96, date:'2026-07-08', time:'待定', group:'KO', home:'R32-88胜者', away:'R32-87胜者', round:'R16', venue:'温哥华·BC Place', odds:{spf:'待定', tip:'待定', level:'—'} },
+  // === 1/4决赛 (8强) ===
+  { id:97, date:'2026-07-10', time:'待定', group:'KO', home:'R16-89胜者', away:'R16-90胜者', round:'QF', venue:'波士顿·吉列体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:98, date:'2026-07-11', time:'待定', group:'KO', home:'R16-91胜者', away:'R16-92胜者', round:'QF', venue:'洛杉矶·SoFi体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:99, date:'2026-07-11', time:'待定', group:'KO', home:'R16-93胜者', away:'R16-94胜者', round:'QF', venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  { id:100, date:'2026-07-12', time:'待定', group:'KO', home:'R16-95胜者', away:'R16-96胜者', round:'QF', venue:'堪萨斯城·箭头体育场', odds:{spf:'待定', tip:'待定', level:'—'} },
+  // === 半决赛 ===
+  { id:101, date:'2026-07-15', time:'待定', group:'KO', home:'QF-97胜者', away:'QF-98胜者', round:'SF', venue:'达拉斯·AT&T体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥半决赛' },
+  { id:102, date:'2026-07-16', time:'待定', group:'KO', home:'QF-99胜者', away:'QF-100胜者', round:'SF', venue:'亚特兰大·梅赛德斯-奔驰体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🔥半决赛' },
+  // === 季军赛 ===
+  { id:103, date:'2026-07-19', time:'待定', group:'KO', home:'SF-101负者', away:'SF-102负者', round:'3RD', venue:'迈阿密·硬石体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🥉季军战' },
+  // === 决赛 ===
+  { id:104, date:'2026-07-20', time:'03:00', group:'KO', home:'SF-101胜者', away:'SF-102胜者', round:'FINAL', venue:'纽约·大都会人寿体育场', odds:{spf:'待定', tip:'待定', level:'—'}, focus:'🏆世界杯决赛' }
 ];
 
 // Tournament start
@@ -380,7 +450,7 @@ function mergeLiveData() {
 }
 
 // ============ HELPERS ============
-function flag(team) { return FLAGS[team] || '🏳️'; }
+function flag(team) { return FLAGS[team] || (/^[A-Z]组/.test(team) ? '🏟️' : /胜者|负者/.test(team) ? '⚽' : '🏳️'); }
 function groupColor(g) { return GROUPS[g]?.color || '#888'; }
 
 function formatDate(d) {
@@ -439,7 +509,7 @@ function renderSchedule() {
       const isToday = m.date === today;
       html += `<div class="date-header">
         ${formatDate(m.date)} ${isToday ? '🔴 今天' : ''}
-        <span class="round-badge">第${m.round}轮</span>
+        <span class="round-badge">${ROUND_NAMES[m.round] || '第'+m.round+'轮'}</span>
       </div>`;
       lastDate = m.date;
     }
@@ -574,17 +644,18 @@ function renderAnalysis() {
       </div>
       <div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:16px;border:1px solid rgba(231,76,60,0.15)">
         <h4>📄 完整方案下载</h4>
-        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">前2期48场全玩法分析PDF，含500/1000元两档预算方案</p>
+        <p style="font-size:0.85em;color:var(--muted);margin-top:8px">104场全赛程AI分析，含小组赛+淘汰赛+500/1000元两档预算方案</p>
         <p style="font-size:0.8em;margin-top:8px"><a href="#" onclick="alert('请联系微信获取完整方案')" style="color:#e74c3c">→ 获取完整方案</a></p>
       </div>
     </div>
     <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px">
-      <h4 style="margin-bottom:8px">📊 前2期48场统计</h4>
+      <h4 style="margin-bottom:8px">📊 全赛程104场统计</h4>
       <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.9em">
-        <span>🟢 铁胆级: <strong style="color:var(--accent)">27场</strong> (56%)</span>
-        <span>🟡 稳胆级: <strong style="color:var(--gold)">13场</strong> (27%)</span>
-        <span>🟠 大概率: <strong style="color:#e67e22">8场</strong> (17%)</span>
-        <span>💰 总场次: <strong>48场</strong></span>
+        <span>🟢 铁胆级: <strong style="color:var(--accent)">27场</strong></span>
+        <span>🟡 稳胆级: <strong style="color:var(--gold)">13场</strong></span>
+        <span>🟠 大概率: <strong style="color:#e67e22">8场</strong></span>
+        <span>⏳ 待定(淘汰赛): <strong style="color:var(--muted)">56场</strong></span>
+        <span>💰 总场次: <strong>104场</strong></span>
       </div>
     </div>
     <p style="margin-top:16px;font-size:0.8em;color:var(--muted);text-align:center">
@@ -596,25 +667,29 @@ function renderAnalysis() {
 function showMatch(id) {
   const m = MATCHES.find(x => x.id === id);
   if (!m) return;
-  // 竞彩编码: 3=主胜 1=平 0=客胜 (中国体彩行业标准)
   const tips = {
     '胜':'主队赢球', '平':'双方打平', '负':'客队赢球'
   };
-  const codeMap = {'胜':'3', '平':'1', '负':'0'};
+  // Smart defaults: compute from level+tip when data.json hasn't loaded per-match data
+  const isStrong = (m.odds?.level||'').includes('铁胆') || (m.odds?.level||'').includes('稳胆');
+  const isHomeWin = m.odds?.tip === '胜', isAwayWin = m.odds?.tip === '负';
+  const tg = m.odds?.totalGoals || (isStrong ? '2球/3球' : '1球/2球');
+  const hf = m.odds?.htft || (isHomeWin ? '胜-胜/平-胜' : isAwayWin ? '负-负/平-负' : '平-平/胜-平');
+  const sc = m.odds?.score || (isHomeWin && isStrong ? '2:0/3:0' : isAwayWin && isStrong ? '0:2/0:3' : isHomeWin ? '1:0/2:1' : isAwayWin ? '0:1/1:2' : '1:1/0:0');
   document.getElementById('modalContent').innerHTML = `
     <h2>${flag(m.home)} ${m.home} VS ${m.away} ${flag(m.away)}</h2>
     <div class="m-detail">📅 ${formatDate(m.date)} ${m.time} 北京时间</div>
     <div class="m-detail">🏟️ ${m.venue}</div>
-    <div class="m-detail">📊 ${GROUPS[m.group].name} · 第${m.round}轮 ${m.focus||''}</div>
+    <div class="m-detail">📊 ${GROUPS[m.group]?.name||'淘汰赛'} · ${ROUND_NAMES[m.round]||'第'+m.round+'轮'} ${m.focus||''}</div>
     ${m.injury ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
     <div class="prediction">
       <h4>🤖 AI推荐</h4>
-      <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'}（${tips[m.odds?.tip]||''}）</span><span style="font-size:0.7em;color:var(--muted)">竞彩编码:${codeMap[m.odds?.tip]||'—'}</span></div>
+      <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'} ${tips[m.odds?.tip]||''}</span></div>
       <div class="bet-row"><span>胜平负SPF</span><span>${m.odds?.spf||'待开售'}</span></div>
       <div class="bet-row"><span>信心等级</span><span>${m.odds?.level||'—'}</span></div>
-      <div class="bet-row"><span>总进球推荐</span><span>2球 / 3球</span></div>
-      <div class="bet-row"><span>半全场推荐</span><span>胜-胜 / 平-胜</span></div>
-      ${m.odds?.tip==='胜'||m.odds?.tip==='负' ? `<div class="bet-row"><span>比分推荐</span><span>2:0 / 3:0</span></div>` : `<div class="bet-row"><span>比分推荐</span><span>1:1 / 1:0</span></div>`}
+      <div class="bet-row"><span>总进球推荐</span><span>${tg}</span></div>
+      <div class="bet-row"><span>半全场推荐</span><span>${hf}</span></div>
+      <div class="bet-row"><span>比分推荐</span><span>${sc}</span></div>
       <p style="font-size:0.75em;color:var(--muted);margin-top:8px">⚠️ 赔率为国际盘口换算预估，实际以竞彩出票为准</p>
     </div>
     <button class="close" onclick="closeModal()">关闭</button>
