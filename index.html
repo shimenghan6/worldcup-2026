@@ -70,22 +70,39 @@ body {
 /* Main container */
 .container { max-width:1200px; margin:0 auto; padding:20px; }
 
-/* Filters */
-.filters {
-  display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; align-items:center;
+/* Select dropdown styling (dark theme) */
+select {
+  -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  padding:8px 32px 8px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238890b5' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
+  color:var(--text); font-size:0.9em; cursor:pointer; transition:border-color 0.2s;
 }
-.filters select, .filters input {
+select:hover { border-color:var(--accent); }
+select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(0,212,170,0.2); }
+select option { background:var(--card); color:var(--text); }
+
+/* Filter bar */
+.filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; align-items:center; }
+.filter-bar input {
   padding:8px 14px; border-radius:8px; border:1px solid var(--border);
-  background:var(--card); color:var(--text); font-size:0.9em;
+  background:var(--card); color:var(--text); font-size:0.9em; min-width:160px;
 }
-.filters input::placeholder { color:var(--muted); }
-.filters .ai-badge {
+.filter-bar input::placeholder { color:var(--muted); }
+.filter-bar input:focus { outline:none; border-color:var(--accent); }
+.filter-bar .ai-badge {
   margin-left:auto; padding:8px 16px; border-radius:20px;
   background:linear-gradient(135deg, #f5c542, #e67e22);
   color:#000; font-weight:700; font-size:0.85em; cursor:pointer;
   border:none; transition:transform 0.2s;
 }
-.filters .ai-badge:hover { transform:scale(1.05); }
+.filter-bar .ai-badge:hover { transform:scale(1.05); }
+
+/* Dark scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
 
 /* Match cards */
 .match-list { display:flex; flex-direction:column; gap:8px; }
@@ -183,8 +200,8 @@ body {
   .match-card { grid-template-columns:32px 1fr auto 1fr 44px; padding:10px 12px; gap:6px; }
   .match-card .team .name { font-size:0.82em; }
   .match-card .venue { display:none; }
-  .filters { gap:4px; }
-  .filters select, .filters input { font-size:0.8em; padding:6px 10px; }
+  .filter-bar { gap:4px; }
+  .filter-bar select, .filter-bar input { font-size:0.8em; padding:6px 10px; }
 }
 </style>
 </head>
@@ -211,7 +228,10 @@ body {
 <div id="dataFreshness" style="text-align:center;padding:8px;font-size:0.8em;background:rgba(245,197,66,0.1);border-bottom:1px solid var(--border);color:var(--muted)">
   <span id="freshnessText">📡 数据加载中...</span>
 </div>
-<div class="container" id="mainContent"></div>
+<div class="container">
+  <div id="filterBar" class="filter-bar"></div>
+  <div id="matchArea"></div>
+</div>
 
 <!-- Match Detail Modal -->
 <div class="modal-overlay" id="modal" style="display:none">
@@ -449,14 +469,26 @@ function mergeLiveData() {
   }
 }
 
-// Debounced search (prevents focus loss on every keystroke)
+// Debounced search (input stays focused, only updates match list)
 let searchTimer = null;
 function debounceSearch(val) {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     teamFilter = val;
-    render(currentView);
+    refreshMatches();
   }, 300);
+}
+function applyFilters() {
+  dateFilter = document.getElementById('dateFilter')?.value || 'all';
+  groupFilter = document.getElementById('groupFilter')?.value || 'all';
+  levelFilter = document.getElementById('levelFilter')?.value || 'all';
+  teamFilter = document.getElementById('teamFilter')?.value || '';
+  refreshMatches();
+}
+function refreshMatches() {
+  const area = document.getElementById('matchArea');
+  if (!area) return;
+  area.innerHTML = '<div class="match-list">' + renderSchedule() + '</div>';
 }
 // ============ HELPERS ============
 function flag(team) {
@@ -499,6 +531,7 @@ updateCountdown();
 let currentView = 'schedule';
 let dateFilter = 'all';
 let groupFilter = 'all';
+let levelFilter = 'all';
 let teamFilter = '';
 
 function getFilteredMatches() {
@@ -506,6 +539,7 @@ function getFilteredMatches() {
     if (dateFilter !== 'all' && m.date !== dateFilter) return false;
     if (groupFilter !== 'all' && m.group !== groupFilter) return false;
     if (teamFilter && !m.home.includes(teamFilter) && !m.away.includes(teamFilter)) return false;
+    if (levelFilter !== 'all' && m.odds?.level !== levelFilter) return false;
     return true;
   });
 }
@@ -718,44 +752,47 @@ document.getElementById('modal').addEventListener('click', function(e) {
 // ============ MAIN RENDER ============
 function render(view) {
   currentView = view;
-  let html = '';
 
   if (view === 'schedule') {
-    // Filters
+    // Build filter bar (persistent, not re-rendered on search)
     const dates = [...new Set(MATCHES.map(m => m.date))];
-    html += `<div class="filters">
-      <select id="dateFilter" onchange="dateFilter=this.value;render(currentView)">
+    const levels = ['🟢铁胆','🟡稳胆','🟠大概率','⏳第3轮','🔮淘汰赛'];
+    document.getElementById('filterBar').innerHTML = `
+      <select id="dateFilter" onchange="applyFilters()">
         <option value="all">📅 全部日期</option>
         ${dates.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('')}
       </select>
-      <select id="groupFilter" onchange="groupFilter=this.value;render(currentView)">
+      <select id="groupFilter" onchange="applyFilters()">
         <option value="all">📊 全部小组</option>
         ${Object.entries(GROUPS).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('')}
       </select>
+      <select id="levelFilter" onchange="applyFilters()">
+        <option value="all">🎯 全部等级</option>
+        ${levels.map(l => `<option value="${l}">${l}</option>`).join('')}
+      </select>
       <input id="teamFilter" type="text" placeholder="🔍 搜索球队..." oninput="debounceSearch(this.value)">
       <button class="ai-badge" onclick="render('analysis')">🤖 AI分析</button>
-    </div>`;
-    html += '<div class="match-list">' + renderSchedule() + '</div>';
+    `;
+    // Restore filter values
+    setTimeout(() => {
+      const df=document.getElementById('dateFilter'); if(df)df.value=dateFilter;
+      const gf=document.getElementById('groupFilter'); if(gf)gf.value=groupFilter;
+      const lf=document.getElementById('levelFilter'); if(lf)lf.value=levelFilter;
+      const tf=document.getElementById('teamFilter'); if(tf)tf.value=teamFilter;
+    }, 0);
+    refreshMatches();
   } else if (view === 'today') {
-    html += renderToday();
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = renderToday();
   } else if (view === 'groups') {
-    html += renderGroups();
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = renderGroups();
   } else if (view === 'focus') {
-    html += '<h3 style="margin-bottom:12px">⭐ 本届世界杯10大必看焦点战</h3>' + renderFocus();
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = '<h3 style="margin-bottom:12px">⭐ 本届世界杯10大必看焦点战</h3>' + renderFocus();
   } else if (view === 'analysis') {
-    html += renderAnalysis();
-  }
-
-  document.getElementById('mainContent').innerHTML = html;
-
-  // Set filter values back after re-render
-  if (view === 'schedule') {
-    const df = document.getElementById('dateFilter');
-    const gf = document.getElementById('groupFilter');
-    const tf = document.getElementById('teamFilter');
-    if (df) df.value = dateFilter;
-    if (gf) gf.value = groupFilter;
-    if (tf) tf.value = teamFilter;
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = renderAnalysis();
   }
 }
 
