@@ -1,291 +1,239 @@
 """
-世界杯赔率自动抓取脚本 - 零Token方案
-每小时自动: 启动Edge浏览器 → 抓取sporttery.cn赔率 → 更新data.json → git push
-完全自动化,无需手动开浏览器
+世界杯赔率自动抓取 - Chrome CDP自动化版
+每小时: 启动Chrome(独立实例) → 抓竞彩网赔率 → 更新data.json → git push
+不需要手动开浏览器,自动管理Chrome生命周期
 
 用法:
-  python fetch_odds.py                  # 全自动抓取+更新+推送
-  python fetch_odds.py --dry-run        # 仅测试,不更新不推送
-  python fetch_odds.py --headless       # 无头模式(浏览器窗口隐藏)
-
-依赖: pip install websockets
+  python fetch_odds.py           # 全自动
+  python fetch_odds.py --dry-run # 仅测试不推送
+  python fetch_odds.py --headless # 后台静默
 """
-
-import asyncio, json, os, sys, subprocess, time, signal, atexit, io
-# Fix Windows GBK encoding issue
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+import asyncio, json, os, sys, subprocess, time, io, tempfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-REPO_DIR = Path(os.path.expanduser("~/github-repos/worldcup-2026"))
-DATA_FILE = REPO_DIR / "data.json"
-CDP_PORT = 9222
-CDP_HOST = f"http://127.0.0.1:{CDP_PORT}"
-SPF_URL = "https://m.sporttery.cn/mjc/jsq/zqspf/"
-DRY_RUN = "--dry-run" in sys.argv
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+REPO = Path(os.path.expanduser("~/github-repos/worldcup-2026"))
+DATA = REPO / "data.json"
+PORT = 9222
+URL = "https://m.sporttery.cn/mjc/jsq/zqspf/"
+DRY = "--dry-run" in sys.argv
 HEADLESS = "--headless" in sys.argv
-NO_PUSH = "--no-push" in sys.argv
 
-BROWSER_PROC = None  # 跟踪我们启动的浏览器进程
+BROWSER_PROC = None
+TMP_DIR = None
 
-def log(msg):
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 def find_browser():
-    """找到系统中的Chrome/Edge浏览器路径(优先Chrome)"""
+    """找Chrome/Edge(Chrome优先)"""
     paths = [
-        # Chrome 优先
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        # Edge 备选
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
     ]
     for p in paths:
-        if os.path.exists(p):
-            log(f"  找到浏览器: {p}")
-            return p
-    # PATH fallback
-    for name in ["chrome", "chromium", "msedge"]:
+        if os.path.exists(p): return p
+    for name in ["chrome", "msedge"]:
         try:
             subprocess.run([name, "--version"], capture_output=True, timeout=5)
             return name
-        except:
-            continue
-    return "chrome"  # last resort
+        except: continue
+    return "chrome"
 
 def check_cdp():
-    """检查CDP端口是否已开放"""
     import urllib.request
-    try:
-        resp = urllib.request.urlopen(f"{CDP_HOST}/json/version", timeout=3)
-        return resp.status == 200
-    except:
-        return False
+    try: return urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/version", timeout=2).status == 200
+    except: return False
 
 def launch_browser():
-    """自动启动Edge/Chrome浏览器(CDP模式)"""
-    global BROWSER_PROC
+    """启动独立Chrome实例(不影响用户正常使用的Chrome)"""
+    global BROWSER_PROC, TMP_DIR
 
     if check_cdp():
-        log("✅ CDP端口已就绪(浏览器已在运行)")
+        log("CDP端口已就绪")
         return True
 
     browser = find_browser()
-    log(f"🚀 启动浏览器: {browser}")
+    log(f"浏览器: {browser}")
 
-    cmd = [browser, f"--remote-debugging-port={CDP_PORT}", "--no-first-run", "--no-default-browser-check"]
-    if HEADLESS:
-        cmd.append("--headless=new")
+    # 关键: 用独立user-data-dir, 避免与已有Chrome冲突
+    TMP_DIR = tempfile.mkdtemp(prefix="wc_odds_")
+    log(f"独立目录: {TMP_DIR}")
+
+    cmd = [
+        browser,
+        f"--remote-debugging-port={PORT}",
+        f"--user-data-dir={TMP_DIR}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-extensions",
+        "--disable-sync",
+        "--disable-background-networking",
+        "about:blank"
+    ]
+    if HEADLESS: cmd.insert(1, "--headless=new")
 
     try:
-        BROWSER_PROC = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        )
-        # 等待CDP就绪(最多30秒)
-        for i in range(30):
+        BROWSER_PROC = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 等CDP就绪(最多20秒)
+        for i in range(20):
             time.sleep(1)
             if check_cdp():
-                log("✅ 浏览器CDP就绪")
+                log("CDP就绪")
                 return True
-
-        log("❌ 浏览器启动超时")
+        log("启动超时")
         return False
     except Exception as e:
-        log(f"❌ 启动浏览器失败: {e}")
+        log(f"启动失败: {e}")
         return False
 
 def kill_browser():
-    """清理:关闭我们启动的浏览器"""
-    global BROWSER_PROC
+    """清理:关浏览器+删临时目录"""
+    global BROWSER_PROC, TMP_DIR
     if BROWSER_PROC:
         try:
             BROWSER_PROC.terminate()
-            log("🧹 浏览器已关闭")
-        except:
-            pass
+            BROWSER_PROC.wait(timeout=5)
+        except: pass
+    if TMP_DIR and os.path.exists(TMP_DIR):
+        try:
+            import shutil
+            shutil.rmtree(TMP_DIR, ignore_errors=True)
+        except: pass
 
-atexit.register(kill_browser)
-
-async def cdp_fetch_odds():
-    """通过CDP连接浏览器,抓取竞彩赔率"""
-    import urllib.request
-    import websockets
-
-    # 获取页面列表
+async def fetch():
+    import urllib.request, websockets
     try:
-        resp = urllib.request.urlopen(f"{CDP_HOST}/json", timeout=5)
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json", timeout=5)
         pages = json.loads(resp.read())
     except Exception as e:
-        log(f"❌ CDP连接失败: {e}")
+        log(f"CDP连接失败: {e}")
         return None
 
-    # 找到或创建页面
-    target = next((p for p in pages if 'sporttery.cn' in p.get('url', '')), None)
+    target = next((p for p in pages if p.get('type') == 'page'), None)
     if not target:
-        target = next((p for p in pages if p.get('type') == 'page'), None)
-
-    if not target:
-        log("❌ 无可用页面")
+        log("无可用页面")
         return None
 
-    ws_url = target.get('webSocketDebuggerUrl')
-    if not ws_url:
-        log("❌ 无法获取WebSocket URL")
-        return None
+    ws_url = target['webSocketDebuggerUrl']
+    log(f"连接页面...")
 
     async with websockets.connect(ws_url, max_size=10*1024*1024) as ws:
-        # 启用Runtime和Page
-        await ws.send(json.dumps({"id":1, "method":"Runtime.enable"}))
-        await ws.recv()
-        await ws.send(json.dumps({"id":2, "method":"Page.enable"}))
+        # 启用Runtime
+        await ws.send(json.dumps({"id":1,"method":"Runtime.enable"}))
         await ws.recv()
 
-        # 导航到竞彩SPF页面
-        await ws.send(json.dumps({
-            "id":3, "method":"Page.navigate", "params":{"url": SPF_URL}
-        }))
-        await ws.recv()
-        log("📡 已导航到竞彩SPF页面")
+        # Page.navigate 发送后不等待响应(消息顺序不可控)
+        await ws.send(json.dumps({"id":2,"method":"Page.navigate","params":{"url":URL}}))
+        log(f"导航: {URL}")
+        # 直接丢弃中间消息,等页面加载
+        await asyncio.sleep(5)
 
-        # 等待页面加载
-        await asyncio.sleep(4)
-
-        # 提取数据
-        await ws.send(json.dumps({
-            "id":4, "method":"Runtime.evaluate",
-            "params": {
-                "expression": """
-                (function() {
-                    var text = document.body.innerText;
-                    var hasWorldCup = text.indexOf('世界杯') > -1;
-                    var timeMatch = text.match(/(\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}:\\d{2})/);
-                    var updateTime = timeMatch ? timeMatch[1] : '';
-                    var lines = text.split('\\n').filter(function(l) { return l.trim(); });
-                    var matches = [], cur = null;
-
-                    for (var i = 0; i < lines.length; i++) {
-                        var line = lines[i].trim();
-                        if (/周[一二三四五六日]\\d{3}/.test(line)) {
-                            if (cur) matches.push(cur);
-                            cur = {code: line, vs: (lines[i+1]||'').trim() + ' vs ' + (lines[i+2]||'').trim()};
-                        } else if (cur && /^\\d+\\.\\d{2}$/.test(line)) {
-                            if (!cur.win) cur.win = line;
-                            else if (!cur.draw) cur.draw = line;
-                            else if (!cur.lose) cur.lose = line;
-                        }
-                    }
-                    if (cur) matches.push(cur);
-
-                    return JSON.stringify({
-                        hasWorldCup: hasWorldCup,
-                        updateTime: updateTime,
-                        matchCount: matches.length,
-                        sample: matches.slice(0, 5)
-                    });
-                })()
-                """,
-                "returnByValue": True
-            }
-        }))
-        result = await ws.recv()
-
-        # 解析结果
+        # Flush any pending messages
         try:
-            data = json.loads(result)
-            extracted = json.loads(data.get('result', {}).get('result', {}).get('value', '{}'))
-        except:
-            log("⚠️ 数据解析失败,可能页面结构变化")
-            return None
+            while True:
+                r = await asyncio.wait_for(ws.recv(), timeout=0.3)
+        except: pass
 
-        return extracted
+        # 发送evaluate
+        await ws.send(json.dumps({"id":99,"method":"Runtime.evaluate","params":{
+            "expression": """
+            (function(){
+                var t=document.body.innerText;
+                var wc=t.indexOf('世界杯')>-1;
+                var links=document.querySelectorAll('a');
+                var teams=[];
+                for(var i=0;i<links.length;i++){
+                    var txt=links[i].textContent.trim();
+                    if(txt.indexOf('VS')>-1) teams.push(txt);
+                }
+                return JSON.stringify({
+                    hasWorldCup:wc,
+                    matchCount:(t.match(/周[一二三四五六日]\\d{3}/g)||[]).length,
+                    title:document.title,
+                    teams:teams.slice(0,20)
+                });
+            })()
+            """,
+            "returnByValue":True
+        }}))
 
-def update_data_json(odds_data):
-    """更新data.json时间戳和数据来源"""
-    if not DATA_FILE.exists():
-        log(f"❌ data.json不存在: {DATA_FILE}")
-        return False
+        # 循环等待id=99的响应(跳过其他消息)
+        for _ in range(15):
+            r = await asyncio.wait_for(ws.recv(), timeout=3)
+            try:
+                j = json.loads(r)
+                if j.get('id') == 99:
+                    raw = j['result'].get('result',{}).get('value','')
+                    if raw: return json.loads(raw)
+            except: pass
 
-    with open(DATA_FILE, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+        log("evaluate响应未收到")
+        return None
 
+def update_json(data):
+    if not DATA.exists(): return False
+    d = json.loads(DATA.read_text(encoding='utf-8'))
     tz = timezone(timedelta(hours=8))
     now = datetime.now(tz).strftime("%Y-%m-%dT%H:%M:%S+08:00")
-    data['updated'] = now
+    d['updated'] = now
+    mc = data.get('matchCount',0) if data else 0
+    wc = data.get('hasWorldCup',False) if data else False
 
-    match_count = odds_data.get('matchCount', 0) if odds_data else 0
-    has_wc = odds_data.get('hasWorldCup', False) if odds_data else False
-
-    if has_wc:
-        data['source'] = f"竞彩官方实时赔率 (自动抓取 {now})"
-        data['note'] = f"赔率由Python每小时自动抓取。世界杯场次已上线({match_count}场)"
-        log(f"🎉 世界杯场次已上线! ({match_count}场)")
+    if wc:
+        d['source'] = f"竞彩官方实时赔率(自动抓取 {now})"
+        d['note'] = "Chrome每小时自动抓取竞彩网"
+        log(f"世界杯已上线! {mc}场")
     else:
-        data['source'] = f"竞彩网检查+AI预估 (检查于{now})"
-        data['note'] = f"世界杯场次尚未在竞彩网开售({match_count}场其他比赛)。SPF为国际盘口换算AI预估。每小时自动检查。"
-        log(f"⏳ 世界杯场次尚未上线(当前{match_count}场其他比赛)")
+        d['source'] = f"竞彩网检查+AI预估(检查于{now})"
+        d['note'] = f"世界杯场次尚未在竞彩网开售(当前{mc}场)。每小时自动检查。"
+        log(f"世界杯未上线(当前{mc}场其他比赛)")
 
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False)
-
-    log(f"✅ data.json 已更新")
+    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    log("data.json更新完成")
     return True
 
 def git_push():
-    """提交并推送"""
-    os.chdir(REPO_DIR)
-
-    # 拉取最新
-    subprocess.run(["git", "pull", "origin", "main"], capture_output=True)
-
-    subprocess.run(["git", "add", "data.json"], capture_output=True)
-    result = subprocess.run(["git", "diff", "--cached", "--name-only"], capture_output=True, text=True)
-
-    if "data.json" not in result.stdout:
-        log("ℹ️ 无变更,跳过推送")
+    os.chdir(REPO)
+    subprocess.run(["git","pull","origin","main"], capture_output=True)
+    subprocess.run(["git","add","data.json"], capture_output=True)
+    r = subprocess.run(["git","diff","--cached","--name-only"], capture_output=True, text=True)
+    if "data.json" not in r.stdout:
+        log("无变更,跳过推送")
         return
-
     now = datetime.now().strftime("%m-%d %H:%M")
-    subprocess.run(["git", "commit", "-m", f"📊 自动赔率更新 {now}"], capture_output=True)
-    subprocess.run(["git", "push", "origin", "main"], capture_output=True)
-    log("✅ 已推送到GitHub")
+    subprocess.run(["git","commit","-m",f"自动赔率更新 {now}"], capture_output=True)
+    subprocess.run(["git","push","origin","main"], capture_output=True)
+    log("已推送到GitHub")
 
 async def main():
-    log("=" * 40)
-    log("🏆 世界杯赔率自动抓取 v2.0 (全自动)")
-    log("=" * 40)
+    log("=== 世界杯赔率抓取(Chrome CDP) ===")
+    if DRY: log("DRY-RUN模式")
 
-    if DRY_RUN:
-        log("🔶 Dry-run模式")
-
-    # 1. 自动启动浏览器
     if not launch_browser():
-        log("❌ 浏览器启动失败,退出")
-        sys.exit(1)
+        log("浏览器启动失败")
+        kill_browser()
+        return
 
-    # 2. 抓取赔率
-    log("📡 抓取竞彩网赔率...")
-    odds = await cdp_fetch_odds()
-
-    if odds:
-        log(f"  比赛数: {odds.get('matchCount', 0)}")
-        log(f"  世界杯: {'是' if odds.get('hasWorldCup') else '否'}")
-        log(f"  更新时间: {odds.get('updateTime', '未知')}")
+    data = await fetch()
+    if data:
+        log(f"结果: {data.get('matchCount',0)}场 | 世界杯={'是' if data.get('hasWorldCup') else '否'}")
+        teams = data.get('teams',[])
+        for t in teams[:5]: log(f"  {t}")
+        if len(teams) > 5: log(f"  ...共{len(teams)}场")
     else:
-        log("⚠️ 赔率抓取失败")
+        log("抓取失败")
 
-    # 3. 更新+推送
-    if not DRY_RUN:
-        update_data_json(odds)
-        if not NO_PUSH:
-            git_push()
+    if not DRY:
+        update_json(data)
+        git_push()
 
-    log("✅ 完成")
-    log("=" * 40)
+    kill_browser()
+    log("完成")
 
 if __name__ == "__main__":
     asyncio.run(main())
