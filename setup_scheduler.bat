@@ -1,4 +1,5 @@
 ﻿@echo off
+chcp 65001 >nul
 setlocal
 
 :: 检查是否已经有管理员权限
