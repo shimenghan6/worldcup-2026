@@ -1,0 +1,7 @@
+{
+  "keys": {
+    "wc2026-demo-free": {"plan": "free", "limit": 100, "note": "演示Key,100次/天"},
+    "wc2026-32cbcded2ba488ac": {"plan": "pro", "limit": 1000, "note": "PRO用户"},
+    "wc2026-f0855d0722f79785": {"plan": "pro", "limit": 1000, "note": "PRO用户"}
+  }
+}
