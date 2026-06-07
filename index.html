@@ -222,6 +222,7 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   <button data-view="groups">📊 分组积分</button>
   <button data-view="focus">⭐ 焦点战</button>
   <button data-view="analysis">🤖 AI分析</button>
+  <button data-view="api" style="background:linear-gradient(135deg,#f5c542,#e67e22);color:#000;font-weight:700">🔌 API</button>
 </nav>
 
 <!-- Main Content -->
@@ -777,6 +778,24 @@ function render(view) {
   } else if (view === 'focus') {
     document.getElementById('filterBar').innerHTML = '';
     document.getElementById('matchArea').innerHTML = '<h3 style="margin-bottom:12px">⭐ 本届世界杯焦点战（27场）</h3>' + renderFocus();
+  } else if (view === 'api') {
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = `<div style="background:var(--card);border-radius:16px;padding:32px;border:1px solid var(--border);text-align:center">
+      <h2 style="color:var(--accent);margin-bottom:8px">🔌 世界杯AI预测 API</h2>
+      <p style="color:var(--muted);margin-bottom:24px">104场比赛数据 · JSON格式 · 按次/按月付费</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:20px;border:1px solid var(--border)">
+          <h4>🆓 免费</h4><div style="font-size:2em;color:var(--accent);font-weight:900">¥0</div><div style="color:var(--muted)">100次/天</div>
+        </div>
+        <div style="background:rgba(0,212,170,.05);border-radius:12px;padding:20px;border:1px solid var(--accent)">
+          <h4>💎 PRO</h4><div style="font-size:2em;color:var(--accent);font-weight:900">¥9.9<small style="font-size:.4em">/月</small></div><div style="color:var(--muted)">1000次/天</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:20px;border:1px solid var(--border)">
+          <h4>🚀 企业</h4><div style="font-size:2em;color:var(--accent);font-weight:900">¥99<small style="font-size:.4em">/月</small></div><div style="color:var(--muted)">无限</div>
+        </div>
+      </div>
+      <a href="https://worldcup-2026-sigma.vercel.app/" target="_blank" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#f5c542,#e67e22);color:#000;border-radius:24px;font-weight:700;text-decoration:none;font-size:1.1em">🔗 打开API →</a>
+    </div>`;
   } else if (view === 'analysis') {
     document.getElementById('filterBar').innerHTML = '';
     document.getElementById('matchArea').innerHTML = renderAnalysis();

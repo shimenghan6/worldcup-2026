@@ -80,7 +80,7 @@ footer{text-align:center;color:#8890b5;font-size:.8em;margin-top:24px}
 <body>
 <div class="card">
 <h1>🏆 <span>世界杯AI预测</span> API</h1>
-<div class="sub">104场比赛 · 每日AI分析 · 竞彩官方赔率</div>
+<div class="sub">104场比赛 · 每日AI分析 · 竞彩官方赔率<br><a href="https://shimenghan6.github.io/worldcup-2026/" style="color:#f5c542;font-size:.9em">📅 打开完整赛程日历 →</a></div>
 
 <div class="plans">
 <div class="plan free"><h3>🆓 免费</h3><div class="price">¥0<small>/月</small></div><div class="limit">100次/天</div><a class="btn" href="/stats?key=wc2026-demo-free">试用 →</a></div>
