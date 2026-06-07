@@ -1,13 +1,31 @@
 from flask import Flask, jsonify, request
-import json
+import json, requests
 from pathlib import Path
 
 app = Flask(__name__)
-DATA_FILE = Path(__file__).parent.parent / "data.json"
+# 实时从GitHub读取data.json(无需重新部署)
+DATA_URL = "https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/data.json"
+LOCAL_FILE = Path(__file__).parent.parent / "data.json"
+CACHE = {"data": None, "time": 0}
 
 def load_data():
-    if not DATA_FILE.exists(): return {}
-    return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+    import time
+    # 60秒缓存,避免每次请求都打GitHub
+    now = time.time()
+    if CACHE["data"] and (now - CACHE["time"]) < 60:
+        return CACHE["data"]
+    try:
+        resp = requests.get(DATA_URL, timeout=5)
+        if resp.ok:
+            CACHE["data"] = resp.json()
+            CACHE["time"] = now
+            return CACHE["data"]
+    except:
+        pass
+    # Fallback to local file
+    if LOCAL_FILE.exists():
+        return json.loads(LOCAL_FILE.read_text(encoding="utf-8"))
+    return {}
 
 @app.route("/")
 def root():
