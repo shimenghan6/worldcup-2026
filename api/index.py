@@ -49,12 +49,13 @@ def root():
 def pricing():
     return jsonify({
         "plans": {
-            "free": {"price": "免费", "limit": "100次/天", "key": "wc2026-demo-free"},
-            "pro": {"price": "¥9.9/月", "limit": "1000次/天", "how": "微信扫码付款后发Key"},
-            "enterprise": {"price": "¥99/月", "limit": "无限", "how": "联系定制"}
+            "free": {"price": "免费", "limit": "100次/天", "key": "wc2026-demo-free", "desc": "试用演示"},
+            "pro": {"price": "¥9.9/月", "limit": "1000次/天", "desc": "个人开发者", "how": "扫码付款 → 发截图获取Key"},
+            "enterprise": {"price": "¥99/月", "limit": "无限", "desc": "商业使用"}
         },
-        "payment": "微信: [你的收款码]",
-        "contact": "付款后发送截图获取API Key"
+        "payment_qr": "https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/pay_qr.jpg",
+        "contact": "付款后联系获取API Key",
+        "demo_try": "?key=wc2026-demo-free"
     })
 
 def require_key(f):
