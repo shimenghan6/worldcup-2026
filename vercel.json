@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "api/index.py": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/api/index.py" }
+  ]
+}
