@@ -61,9 +61,25 @@ def update_json(data):
     d['updated'] = now
     mc = data.get('matchCount', 0) if data else 0
     wc = data.get('hasWorldCup', False) if data else False
+
+    # 用抓到的赔率更新单场SPF（按竞彩code匹配）
+    updated_count = 0
+    if data and data.get('matches'):
+        fetched = {m['code']: m for m in data['matches'] if m.get('code')}
+        for match in d.get('matches', []):
+            code = match.get('code', '')
+            if code and code in fetched:
+                f = fetched[code]
+                old_spf = match.get('spf', '')
+                new_spf = f"{f['spf_win']}/{f['spf_draw']}/{f['spf_lose']}"
+                if new_spf != old_spf and f['spf_win']:
+                    match['spf'] = new_spf
+                    updated_count += 1
+        log(f"SPF赔率更新: {updated_count}场")
+
     if wc:
         d['source'] = f"竞彩官方API实时赔率(自动抓取 {now})"
-        d['note'] = "每小时自动抓取竞彩官方API"
+        d['note'] = f"每小时自动抓取竞彩官方API | SPF更新:{updated_count}场"
     else:
         d['source'] = f"竞彩API检查+AI预估(检查于{now})"
         d['note'] = f"世界杯场次尚未在竞彩API中出现(当前{mc}场)。每小时自动检查。"
