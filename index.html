@@ -467,6 +467,7 @@ function mergeLiveData() {
     if (live.score) m.odds.score = live.score;
     if (live.injury) m.injury = live.injury;
     if (live.news) m.news = live.news;
+    if (live.result) m.result = live.result;
   }
 }
 
@@ -569,11 +570,15 @@ function renderSchedule() {
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
       <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
-      ${m.odds ? `<div class="odds-row">
+      ${m.result ? `<div class="odds-row" style="background:rgba(0,212,170,0.08)">
+        <span style="color:var(--accent);font-weight:700">✅ 已完赛 ${m.result}</span>
+        <span style="color:var(--muted);font-size:0.75em">预测: ${m.odds?.score||'—'}</span>
+        ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
+      </div>` : (m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
         <span>🎯 ${m.odds.tip}</span>
         ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
-      </div>` : ''}
+      </div>` : '')}
       <div class="venue">📍 ${m.venue}</div>
     </div>`;
   }
