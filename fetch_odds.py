@@ -61,15 +61,90 @@ def update_json(data):
     d['updated'] = now
     mc = data.get('matchCount', 0) if data else 0
     wc = data.get('hasWorldCup', False) if data else False
+
+    # 用抓到的赔率更新单场SPF（按竞彩code匹配）
+    updated_count = 0
+    if data and data.get('matches'):
+        fetched = {m['code']: m for m in data['matches'] if m.get('code')}
+        for match in d.get('matches', []):
+            code = match.get('code', '')
+            if code and code in fetched:
+                f = fetched[code]
+                old_spf = match.get('spf', '')
+                new_spf = f"{f['spf_win']}/{f['spf_draw']}/{f['spf_lose']}"
+                if new_spf != old_spf and f['spf_win']:
+                    match['spf'] = new_spf
+                    updated_count += 1
+        log(f"SPF赔率更新: {updated_count}场")
+
     if wc:
         d['source'] = f"竞彩官方API实时赔率(自动抓取 {now})"
-        d['note'] = "每小时自动抓取竞彩官方API"
+        d['note'] = f"每小时自动抓取竞彩官方API | SPF更新:{updated_count}场"
     else:
         d['source'] = f"竞彩API检查+AI预估(检查于{now})"
         d['note'] = f"世界杯场次尚未在竞彩API中出现(当前{mc}场)。每小时自动检查。"
     DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
     log("data.json更新完成")
     return True
+
+def fetch_results():
+    """从竞彩直播API抓取世界杯赛果(含半场比分),写入data.json"""
+    url = "https://webapi.sporttery.cn/gateway/uniform/fb/getMatchLiveV1.qry?matchIds=&eventTc=goals,penalty_shootout&method=live"
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.sporttery.cn/jc/zqbfzb/", "Accept": "application/json"}
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        log(f"赛果API请求失败: {e}")
+        return 0
+
+    # (中文名, 对手中文名) → match id (竞彩API返回中文队名)
+    team_to_id = {
+        ('墨西哥','南非'):1, ('韩国','捷克'):2,
+        ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
+        ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6,
+        ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
+        ('德国','库拉索'):9, ('荷兰','日本'):10,
+        ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
+        ('西班牙','佛得角'):13, ('比利时','埃及'):14,
+        ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
+        ('法国','塞内加尔'):17, ('伊拉克','挪威'):18,
+        ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
+        ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22,
+        ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
+    }
+    swap = {(b,a):v for (a,b),v in team_to_id.items()}
+    team_to_id.update(swap)
+
+    if not DATA.exists(): return 0
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    updated = 0
+
+    for m in data.get('value', []):
+        if m.get('matchStatusName') != '已完成': continue
+        home = m.get('homeTeamAllName', '')
+        away = m.get('awayTeamAllName', '')
+        mid = team_to_id.get((home, away))
+        if not mid: continue
+
+        result = m.get('sectionsNo999', '')  # 全场
+        ht = m.get('sectionsNo1', '')        # 半场
+        match = d['matches'][mid-1]
+        changed = False
+        if result and not match.get('result'):
+            match['result'] = result; changed = True
+        if ht and not match.get('ht_result'):
+            match['ht_result'] = ht; changed = True
+        if changed:
+            updated += 1
+            log(f"赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
+
+    if updated:
+        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        log(f"赛果更新: {updated}场")
+    return updated
 
 def upload_github():
     """通过GitHub REST API直传data.json(免git)"""
@@ -111,6 +186,7 @@ def main():
 
     if not DRY:
         update_json(data)
+        fetch_results()
         upload_github()
 
     log("完成")
