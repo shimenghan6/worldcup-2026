@@ -570,9 +570,9 @@ function renderSchedule() {
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
       <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
-      ${m.result ? `<div class="odds-row" style="background:rgba(0,212,170,0.08)">
-        <span style="color:var(--accent);font-weight:700">✅ 已完赛 ${m.result}</span>
-        <span style="color:var(--muted);font-size:0.75em">预测: ${m.odds?.score||'—'}</span>
+      ${m.result ? `<div class="odds-row" style="background:rgba(0,212,170,0.08);justify-content:center;gap:16px;padding:8px 0">
+        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 已完赛 ${m.result}</span>
+        <span style="color:var(--muted);font-size:0.8em">预测:${m.odds?.score||'—'} | 半全场:${m.odds?.htft||'—'}</span>
         ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
       </div>` : (m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
