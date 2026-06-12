@@ -87,6 +87,69 @@ def update_json(data):
     log("data.json更新完成")
     return True
 
+def fetch_results():
+    """从FIFA API抓取世界杯赛果,写入data.json"""
+    from datetime import date, timedelta
+    start = (date.today() - timedelta(days=1)).isoformat()
+    end = (date.today() + timedelta(days=2)).isoformat()
+    url = f"https://api.fifa.com/api/v3/calendar/matches?from={start}T00:00:00Z&to={end}T23:59:59Z&language=en&count=100"
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        log(f"FIFA API请求失败: {e}")
+        return 0
+
+    # (FIFA英文名, 对手英文名) → match id
+    team_to_id = {
+        ('Mexico','South Africa'):1, ('Korea Republic','Czechia'):2,
+        ('Canada','Bosnia and Herzegovina'):3, ('United States','Paraguay'):4,
+        ('Qatar','Switzerland'):5, ('Brazil','Morocco'):6,
+        ('Haiti','Scotland'):7, ('Australia','Turkiye'):8,
+        ('Germany','Curacao'):9, ('Netherlands','Japan'):10,
+        ("Cote d'Ivoire",'Ecuador'):11, ('Sweden','Tunisia'):12,
+        ('Spain','Cabo Verde'):13, ('Belgium','Egypt'):14,
+        ('Saudi Arabia','Uruguay'):15, ('Iran','New Zealand'):16,
+        ('France','Senegal'):17, ('Iraq','Norway'):18,
+        ('Argentina','Algeria'):19, ('Austria','Jordan'):20,
+        ('Portugal','DR Congo'):21, ('England','Croatia'):22,
+        ('Ghana','Panama'):23, ('Uzbekistan','Colombia'):24,
+    }
+    # Support swapped home/away
+    swap = {(b,a):v for (a,b),v in team_to_id.items()}
+    team_to_id.update(swap)
+
+    if not DATA.exists(): return 0
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    updated = 0
+
+    for m in data.get('Results', []):
+        stage = [s.get('Description','') for s in (m.get('StageName') or [])]
+        if 'First Stage' not in stage: continue
+        if m.get('MatchStatus') not in (0, 3): continue
+        hs = m.get('HomeTeamScore')
+        as_ = m.get('AwayTeamScore')
+        if hs is None or as_ is None: continue
+
+        home_en = (m.get('Home') or {}).get('TeamName',[{}])[0].get('Description','')
+        away_en = (m.get('Away') or {}).get('TeamName',[{}])[0].get('Description','')
+        mid = team_to_id.get((home_en, away_en))
+        if not mid: continue
+
+        result = f"{hs}-{as_}"
+        match = d['matches'][mid-1]
+        if not match.get('result'):
+            match['result'] = result
+            updated += 1
+            log(f"赛果: {home_en} {hs}-{as_} {away_en} (id={mid})")
+
+    if updated:
+        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        log(f"赛果更新: {updated}场")
+    return updated
+
 def upload_github():
     """通过GitHub REST API直传data.json(免git)"""
     token = get_token()
@@ -127,6 +190,7 @@ def main():
 
     if not DRY:
         update_json(data)
+        fetch_results()
         upload_github()
 
     log("完成")
