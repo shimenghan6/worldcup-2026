@@ -575,7 +575,6 @@ function renderSchedule() {
         <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 比分 ${m.result}</span>
         <span style="color:var(--muted);font-size:0.8em">AI预测:${m.odds?.score||'—'}</span>
         <span style="color:var(--muted);font-size:0.8em">半全场: 实际${m.ht_result||'?'} | 预测${m.odds?.htft||'—'}</span>
-        ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
       </div>` : (m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
         <span>🎯 ${m.odds.tip}</span>
