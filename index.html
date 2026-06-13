@@ -500,6 +500,10 @@ function flag(team) {
   if (/胜者|负者/.test(team)) return '⚽';
   return '🏳️';
 }
+
+// FIFA Rankings (June 2026)
+const RANK={阿根廷:1,法国:2,西班牙:3,英格兰:4,葡萄牙:5,巴西:6,荷兰:7,比利时:8,德国:9,克罗地亚:10,乌拉圭:11,哥伦比亚:12,摩洛哥:13,日本:14,美国:15,墨西哥:16,塞内加尔:17,伊朗:18,瑞士:19,丹麦:20,奥地利:21,乌克兰:22,韩国:23,澳大利亚:24,瑞典:25,波兰:26,威尔士:27,埃及:28,加拿大:29,尼日利亚:30,塞尔维亚:31,秘鲁:32,土耳其:33,智利:34,捷克:35,挪威:36,喀麦隆:39,厄瓜多尔:40,罗马尼亚:41,苏格兰:42,阿尔及利亚:43,哥斯达黎加:44,巴拉圭:45,沙特阿拉伯:48,突尼斯:50,巴拿马:54,卡塔尔:55,芬兰:57,乌兹别克斯坦:58,加纳:60,民主刚果:61,约旦:64,伊拉克:68,佛得角:72,南非:74,洪都拉斯:78,新西兰:82,海地:87,库拉索:91,波黑:56};
+function rankBadge(t){const r=RANK[t];return r?`<span style=\"font-size:0.65em;color:var(--muted);margin-left:2px\">#${r}</span>`:'';}
 function groupColor(g) { return GROUPS[g]?.color || '#888'; }
 
 function formatDate(d) {
@@ -567,9 +571,9 @@ function renderSchedule() {
     const isFocus = m.focus ? ' with-odds' : '';
     html += `<div class="match-card${isFocus}" onclick="showMatch(${m.id})" data-match-id="${m.id}">
       <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
-      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
       <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
       ${m.result ? `<div class="odds-row" style="justify-content:center;gap:20px;padding:8px 0;background:rgba(0,212,170,0.06)">
         <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 比分 ${m.result}</span>
@@ -600,9 +604,9 @@ function renderToday() {
       <div style="margin-top:20px">${nextMatches.map(m => `
         <div class="match-card" onclick="showMatch(${m.id})" style="grid-template-columns:40px 1fr auto 1fr 60px">
           <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-          <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+          <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
           <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
-          <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+          <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
           <div style="font-size:0.75em;color:var(--accent)">${m.focus||''}</div>
         </div>`).join('')}</div>
     </div>`;
@@ -611,9 +615,9 @@ function renderToday() {
     todayMatches.map(m => `
     <div class="match-card with-odds" onclick="showMatch(${m.id})">
       <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
-      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
       <div style="text-align:center"><span style="background:var(--accent);color:#000;padding:2px 10px;border-radius:10px;font-size:0.8em;font-weight:700">${m.odds?.tip||''}</span></div>
       ${m.odds ? `<div class="odds-row"><span>🏆 SPF: ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span><span>⭐ ${m.odds.level||''}</span>${m.injury?`<span>⚠️ ${m.injury}</span>`:''}</div>` : ''}
       <div class="venue">📍 ${m.venue} ${m.focus||''}</div>
@@ -654,9 +658,9 @@ function renderFocus() {
   return focused.map(m => {
     return `<div class="match-card with-odds" onclick="showMatch(${m.id})" style="margin-bottom:8px">
       <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-      <div class="team home"><span class="name">${m.home}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
-      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}</span></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
       <div style="font-size:0.8em;color:var(--gold);text-align:center">${m.focus}</div>
       <div style="grid-column:1/-1;font-size:0.85em;color:var(--muted);padding:4px 0">
         📅 ${formatDate(m.date)} | 🏟️ ${m.venue}
