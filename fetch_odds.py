@@ -63,6 +63,7 @@ def update_json(data):
     wc = data.get('hasWorldCup', False) if data else False
 
     # 用抓到的赔率更新单场SPF（按竞彩code匹配）
+    # 🔒 铁律: 已完赛的比赛只更新SPF,不碰预测字段
     updated_count = 0
     if data and data.get('matches'):
         fetched = {m['code']: m for m in data['matches'] if m.get('code')}
@@ -75,6 +76,7 @@ def update_json(data):
                 if new_spf != old_spf and f['spf_win']:
                     match['spf'] = new_spf
                     updated_count += 1
+                    # 🔒 已完赛: 只更新SPF,不碰tip/level/score/totalGoals/htft
         log(f"SPF赔率更新: {updated_count}场")
 
     if wc:
