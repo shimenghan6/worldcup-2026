@@ -88,36 +88,33 @@ def update_json(data):
     return True
 
 def fetch_results():
-    """从FIFA API抓取世界杯赛果,写入data.json"""
-    from datetime import date, timedelta
-    start = (date.today() - timedelta(days=1)).isoformat()
-    end = (date.today() + timedelta(days=2)).isoformat()
-    url = f"https://api.fifa.com/api/v3/calendar/matches?from={start}T00:00:00Z&to={end}T23:59:59Z&language=en&count=100"
+    """从竞彩直播API抓取世界杯赛果(含半场比分),写入data.json"""
+    url = "https://webapi.sporttery.cn/gateway/uniform/fb/getMatchLiveV1.qry?matchIds=&eventTc=goals,penalty_shootout&method=live"
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.sporttery.cn/jc/zqbfzb/", "Accept": "application/json"}
 
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=10)
+        resp = requests.get(url, headers=headers, timeout=10)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
-        log(f"FIFA API请求失败: {e}")
+        log(f"赛果API请求失败: {e}")
         return 0
 
-    # (FIFA英文名, 对手英文名) → match id
+    # (中文名, 对手中文名) → match id (竞彩API返回中文队名)
     team_to_id = {
-        ('Mexico','South Africa'):1, ('Korea Republic','Czechia'):2,
-        ('Canada','Bosnia and Herzegovina'):3, ('United States','Paraguay'):4,
-        ('Qatar','Switzerland'):5, ('Brazil','Morocco'):6,
-        ('Haiti','Scotland'):7, ('Australia','Turkiye'):8,
-        ('Germany','Curacao'):9, ('Netherlands','Japan'):10,
-        ("Cote d'Ivoire",'Ecuador'):11, ('Sweden','Tunisia'):12,
-        ('Spain','Cabo Verde'):13, ('Belgium','Egypt'):14,
-        ('Saudi Arabia','Uruguay'):15, ('Iran','New Zealand'):16,
-        ('France','Senegal'):17, ('Iraq','Norway'):18,
-        ('Argentina','Algeria'):19, ('Austria','Jordan'):20,
-        ('Portugal','DR Congo'):21, ('England','Croatia'):22,
-        ('Ghana','Panama'):23, ('Uzbekistan','Colombia'):24,
+        ('墨西哥','南非'):1, ('韩国','捷克'):2,
+        ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
+        ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6,
+        ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
+        ('德国','库拉索'):9, ('荷兰','日本'):10,
+        ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
+        ('西班牙','佛得角'):13, ('比利时','埃及'):14,
+        ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
+        ('法国','塞内加尔'):17, ('伊拉克','挪威'):18,
+        ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
+        ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22,
+        ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
     }
-    # Support swapped home/away
     swap = {(b,a):v for (a,b),v in team_to_id.items()}
     team_to_id.update(swap)
 
@@ -125,25 +122,24 @@ def fetch_results():
     d = json.loads(DATA.read_text(encoding='utf-8'))
     updated = 0
 
-    for m in data.get('Results', []):
-        stage = [s.get('Description','') for s in (m.get('StageName') or [])]
-        if 'First Stage' not in stage: continue
-        if m.get('MatchStatus') not in (0, 3): continue
-        hs = m.get('HomeTeamScore')
-        as_ = m.get('AwayTeamScore')
-        if hs is None or as_ is None: continue
-
-        home_en = (m.get('Home') or {}).get('TeamName',[{}])[0].get('Description','')
-        away_en = (m.get('Away') or {}).get('TeamName',[{}])[0].get('Description','')
-        mid = team_to_id.get((home_en, away_en))
+    for m in data.get('value', []):
+        if m.get('matchStatusName') != '已完成': continue
+        home = m.get('homeTeamAllName', '')
+        away = m.get('awayTeamAllName', '')
+        mid = team_to_id.get((home, away))
         if not mid: continue
 
-        result = f"{hs}-{as_}"
+        result = m.get('sectionsNo999', '')  # 全场
+        ht = m.get('sectionsNo1', '')        # 半场
         match = d['matches'][mid-1]
-        if not match.get('result'):
-            match['result'] = result
+        changed = False
+        if result and not match.get('result'):
+            match['result'] = result; changed = True
+        if ht and not match.get('ht_result'):
+            match['ht_result'] = ht; changed = True
+        if changed:
             updated += 1
-            log(f"赛果: {home_en} {hs}-{as_} {away_en} (id={mid})")
+            log(f"赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
 
     if updated:
         DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
