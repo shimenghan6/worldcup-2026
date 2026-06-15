@@ -218,9 +218,10 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
 <!-- Nav -->
 <nav class="nav-tabs" id="navTabs">
   <button data-view="schedule" class="active">📅 完整赛程</button>
-  <button data-view="today">🔴 今日比赛</button>
-  <button data-view="groups">📊 分组积分</button>
-  <button data-view="focus">⭐ 焦点战</button>
+  <button data-view="today">🔴 今日</button>
+  <button data-view="tomorrow">📅 明日</button>
+  <button data-view="groups">📊 分组</button>
+  <button data-view="focus">⭐ 焦点</button>
   <button data-view="analysis">🤖 AI分析</button>
   <button data-view="api" style="background:linear-gradient(135deg,#f5c542,#e67e22);color:#000;font-weight:700">🔌 API</button>
 </nav>
@@ -590,38 +591,57 @@ function renderSchedule() {
   return html;
 }
 
+function renderMatchCards(matches, title) {
+  // Shared card rendering for today/tomorrow/schedule views
+  if (matches.length === 0) return '';
+  let html = title ? `<div class="date-header">${title}<span class="round-badge">${matches.length}场</span></div>` : '';
+  html += matches.map(m => `
+    <div class="match-card" onclick="showMatch(${m.id})">
+      <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
+      <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
+      <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
+      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
+      <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
+      ${m.result ? `<div class="odds-row" style="justify-content:center;gap:20px;padding:8px 0;background:rgba(0,212,170,0.06)">
+        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 比分 ${m.result}</span>
+        <span style="color:var(--muted);font-size:0.8em">AI预测:${m.odds?.score||'—'}</span>
+        <span style="color:var(--muted);font-size:0.8em">半全场: 实际${m.ht_result||'?'} | 预测${m.odds?.htft||'—'}</span>
+      </div>` : (m.odds ? `<div class="odds-row">
+        <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
+        <span>🎯 ${m.odds.tip}</span>
+        ${m.injury ? `<span>⚠️ ${m.injury}</span>` : ''}
+      </div>` : '')}
+      <div class="venue">📍 ${m.venue}</div>
+    </div>`).join('');
+  return html;
+}
+
 function renderToday() {
   const today = new Date().toISOString().slice(0,10);
   const todayMatches = MATCHES.filter(m => m.date === today);
   if (todayMatches.length === 0) {
-    // Find next match day
     const future = MATCHES.filter(m => m.date > today);
     const nextDate = future.length > 0 ? future[0].date : MATCHES[MATCHES.length-1].date;
     const nextMatches = MATCHES.filter(m => m.date === nextDate);
     return `<div style="text-align:center;padding:20px;color:var(--muted)">
       <p style="font-size:1.2em">📅 今天没有比赛</p>
-      <p style="margin-top:12px">下一比赛日：<strong style="color:var(--accent)">${formatDate(nextDate)}</strong>（${nextMatches.length}场）</p>
-      <div style="margin-top:20px">${nextMatches.map(m => `
-        <div class="match-card" onclick="showMatch(${m.id})" style="grid-template-columns:40px 1fr auto 1fr 60px">
-          <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-          <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
-          <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
-          <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
-          <div style="font-size:0.75em;color:var(--accent)">${m.focus||''}</div>
-        </div>`).join('')}</div>
+      <p style="margin-top:12px">下一比赛日：<strong style="color:var(--accent)">${formatDate(nextDate)}</strong></p>
+      <div style="margin-top:16px">${renderMatchCards(nextMatches)}</div>
     </div>`;
   }
-  return `<h3 style="color:var(--accent);margin-bottom:12px">🔴 今日 ${todayMatches.length} 场比赛</h3>` +
-    todayMatches.map(m => `
-    <div class="match-card with-odds" onclick="showMatch(${m.id})">
-      <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
-      <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
-      <div class="vs"><div>VS</div><div class="m-time">${m.time}</div></div>
-      <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
-      <div style="text-align:center"><span style="background:var(--accent);color:#000;padding:2px 10px;border-radius:10px;font-size:0.8em;font-weight:700">${m.odds?.tip||''}</span></div>
-      ${m.odds ? `<div class="odds-row"><span>🏆 SPF: ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span><span>⭐ ${m.odds.level||''}</span>${m.injury?`<span>⚠️ ${m.injury}</span>`:''}</div>` : ''}
-      <div class="venue">📍 ${m.venue} ${m.focus||''}</div>
-    </div>`).join('');
+  return `<h3 style="color:var(--accent);margin-bottom:8px">🔴 ${formatDate(today)} · ${todayMatches.length}场比赛</h3>` +
+    renderMatchCards(todayMatches);
+}
+
+function renderTomorrow() {
+  const tmr = new Date(); tmr.setDate(tmr.getDate()+1);
+  const tmrStr = tmr.toISOString().slice(0,10);
+  const tmrMatches = MATCHES.filter(m => m.date === tmrStr);
+  if (tmrMatches.length === 0) {
+    return `<div style="text-align:center;padding:20px;color:var(--muted)">📅 明天没有比赛</div>`;
+  }
+  return `<h3 style="color:var(--gold);margin-bottom:8px">📅 ${formatDate(tmrStr)} · ${tmrMatches.length}场比赛</h3>` +
+    renderMatchCards(tmrMatches);
 }
 
 function renderGroups() {
@@ -782,6 +802,9 @@ function render(view) {
   } else if (view === 'today') {
     document.getElementById('filterBar').innerHTML = '';
     document.getElementById('matchArea').innerHTML = renderToday();
+  } else if (view === 'tomorrow') {
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = renderTomorrow();
   } else if (view === 'groups') {
     document.getElementById('filterBar').innerHTML = '';
     document.getElementById('matchArea').innerHTML = renderGroups();
