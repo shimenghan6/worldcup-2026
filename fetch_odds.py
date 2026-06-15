@@ -143,6 +143,48 @@ def fetch_results():
             updated += 1
             log(f"赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
 
+    # Fallback: FIFA API for older matches (sporttery only keeps ~3 recent)
+    try:
+        from datetime import date, timedelta
+        start = (date.today() - timedelta(days=7)).isoformat()
+        end = (date.today() + timedelta(days=1)).isoformat()
+        fifa_url = f"https://api.fifa.com/api/v3/calendar/matches?from={start}T00:00:00Z&to={end}T23:59:59Z&language=en&count=200"
+        fifa_resp = requests.get(fifa_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        if fifa_resp.ok:
+            fifa_data = fifa_resp.json()
+            # FIFA EN→CN name mapping for match IDs
+            en_to_id = {
+                ('Mexico','South Africa'):1, ('Korea Republic','Czechia'):2,
+                ('Canada','Bosnia and Herzegovina'):3, ('United States','Paraguay'):4,
+                ('Qatar','Switzerland'):5, ('Brazil','Morocco'):6,
+                ('Haiti','Scotland'):7, ('Australia','Turkiye'):8,
+                ('Germany','Curacao'):9, ('Netherlands','Japan'):10,
+                ("Cote d'Ivoire",'Ecuador'):11, ('Sweden','Tunisia'):12,
+                ('Spain','Cabo Verde'):13, ('Belgium','Egypt'):14,
+                ('Saudi Arabia','Uruguay'):15, ('Iran','New Zealand'):16,
+                ('France','Senegal'):17, ('Iraq','Norway'):18,
+                ('Argentina','Algeria'):19, ('Austria','Jordan'):20,
+                ('Portugal','DR Congo'):21, ('England','Croatia'):22,
+                ('Ghana','Panama'):23, ('Uzbekistan','Colombia'):24,
+            }
+            swap_en = {(b,a):v for (a,b),v in en_to_id.items()}
+            en_to_id.update(swap_en)
+            for m in fifa_data.get('Results',[]):
+                stages = [s.get('Description','') for s in (m.get('StageName') or [])]
+                if 'First Stage' not in stages: continue
+                hs=m.get('HomeTeamScore'); a_s=m.get('AwayTeamScore')
+                if hs is None or a_s is None: continue
+                home_en=(m.get('Home')or{}).get('TeamName',[{}])[0].get('Description','')
+                away_en=(m.get('Away')or{}).get('TeamName',[{}])[0].get('Description','')
+                mid=en_to_id.get((home_en,away_en))
+                if not mid: continue
+                result=f'{hs}-{a_s}'
+                match=d['matches'][mid-1]
+                if not match.get('result'): match['result']=result; updated+=1; log(f'FIFA赛果: {home_en} {result} {away_en} (id={mid})')
+        log(f'赛果更新(含FIFA): {updated}场')
+    except Exception as e:
+        log(f'FIFA fallback: {e}')
+
     if updated:
         DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
         log(f"赛果更新: {updated}场")
