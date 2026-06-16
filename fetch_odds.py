@@ -63,12 +63,17 @@ def update_json(data):
     wc = data.get('hasWorldCup', False) if data else False
 
     # 用抓到的赔率更新单场SPF（按竞彩code匹配）
-    # 🔒 铁律: 已完赛的比赛只更新SPF,不碰预测字段
+    # 🔒 铁律: 已完赛的比赛(有result)不更新SPF — 比赛踢完了赔率无意义
     updated_count = 0
+    skipped_finished = 0
     if data and data.get('matches'):
         fetched = {m['code']: m for m in data['matches'] if m.get('code')}
         for match in d.get('matches', []):
             code = match.get('code', '')
+            # 🔒 跳过已完赛的比赛
+            if match.get('result'):
+                skipped_finished += 1
+                continue
             if code and code in fetched:
                 f = fetched[code]
                 old_spf = match.get('spf', '')
@@ -76,8 +81,7 @@ def update_json(data):
                 if new_spf != old_spf and f['spf_win']:
                     match['spf'] = new_spf
                     updated_count += 1
-                    # 🔒 已完赛: 只更新SPF,不碰tip/level/score/totalGoals/htft
-        log(f"SPF赔率更新: {updated_count}场")
+        log(f"SPF赔率更新: {updated_count}场 (跳过{skipped_finished}场已完赛)")
 
     if wc:
         d['source'] = f"竞彩官方API实时赔率(自动抓取 {now})"

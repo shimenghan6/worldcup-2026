@@ -138,6 +138,7 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   font-weight:900; color:#fff;
 }
 .match-card .venue { font-size:0.7em; color:var(--muted); grid-column:1/-1; }
+.match-card .injury-text {max-height:2.4em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:0.7em;color:var(--danger)}
 .match-card .odds-row {
   grid-column:1/-1; display:flex; gap:12px; font-size:0.78em;
   color:var(--muted); padding-top:6px; border-top:1px solid var(--border);
@@ -576,10 +577,10 @@ function renderSchedule() {
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
       <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
-      ${m.result ? `<div class="odds-row" style="justify-content:center;gap:20px;padding:8px 0;background:rgba(0,212,170,0.06)">
-        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 比分 ${m.result}</span>
-        <span style="color:var(--muted);font-size:0.8em">AI预测:${m.odds?.score||'—'}</span>
-        <span style="color:var(--muted);font-size:0.8em">半全场: 实际${m.ht_result||'?'} | 预测${m.odds?.htft||'—'}</span>
+      ${m.result ? `<div style="text-align:center;padding:10px 0;background:rgba(0,212,170,0.06);border-radius:6px">
+        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ ${m.result}</span>
+        <span style="color:var(--muted);font-size:0.8em">AI预测 ${m.odds?.score||'—'}</span>
+        <span style="color:var(--muted);font-size:0.8em">半全场 实际${m.ht_result||'?'} | '—'}</span>
       </div>` : (m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
         <span>🎯 ${m.odds.tip}</span>
@@ -602,10 +603,10 @@ function renderMatchCards(matches, title) {
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
       <div class="team"><span class="flag">${flag(m.away)}</span><span class="name">${m.away}${rankBadge(m.away)}</span></div>
       <div style="font-size:0.75em;color:var(--accent);text-align:center">${m.odds?.level||''} ${m.focus||''}</div>
-      ${m.result ? `<div class="odds-row" style="justify-content:center;gap:20px;padding:8px 0;background:rgba(0,212,170,0.06)">
-        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ 比分 ${m.result}</span>
-        <span style="color:var(--muted);font-size:0.8em">AI预测:${m.odds?.score||'—'}</span>
-        <span style="color:var(--muted);font-size:0.8em">半全场: 实际${m.ht_result||'?'} | 预测${m.odds?.htft||'—'}</span>
+      ${m.result ? `<div style="text-align:center;padding:10px 0;background:rgba(0,212,170,0.06);border-radius:6px">
+        <span style="color:var(--accent);font-weight:700;font-size:1.1em">✅ ${m.result}</span>
+        <span style="color:var(--muted);font-size:0.8em">AI预测 ${m.odds?.score||'—'}</span>
+        <span style="color:var(--muted);font-size:0.8em">半全场 实际${m.ht_result||'?'} | '—'}</span>
       </div>` : (m.odds ? `<div class="odds-row">
         <span><span class="odds-tag">SPF</span> ${m.odds.spf} <span style="font-size:0.7em;color:var(--accent)">AI预估</span></span>
         <span>🎯 ${m.odds.tip}</span>
@@ -747,7 +748,7 @@ function showMatch(id) {
     <div class="m-detail">📅 ${formatDate(m.date)} ${m.time} 北京时间</div>
     <div class="m-detail">🏟️ ${m.venue}</div>
     <div class="m-detail">📊 ${GROUPS[m.group]?.name||'淘汰赛'} · ${ROUND_NAMES[m.round]||'第'+m.round+'轮'} ${m.focus||''}</div>
-    ${m.injury ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
+    ${m.injury && !m.result ? `<div class="m-detail" style="color:var(--danger)">⚠️ ${m.injury}</div>` : ''}
     <div class="prediction">
       <h4>🤖 AI推荐 <span style="font-size:0.7em;color:var(--accent);font-weight:400">AI预估</span></h4>
       <div class="bet-row"><span>推荐结果</span><span style="color:var(--accent);font-weight:700">${m.odds?.tip||'—'} ${tips[m.odds?.tip]||''}</span></div>
