@@ -173,10 +173,10 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   display:flex; align-items:center; justify-content:center; padding:20px;
 }
 .modal {
-  background:var(--card); border-radius:16px; padding:24px; max-width:500px;
-  width:100%; max-height:90vh; overflow-y:auto; border:1px solid var(--border);
+  background:var(--card); border-radius:16px; padding:16px 20px; max-width:480px;
+  width:100%; max-height:85vh; overflow-y:auto; border:1px solid var(--border);
 }
-.modal h2 { font-size:1.3em; margin-bottom:12px; }
+.modal h2 { font-size:1.15em; margin-bottom:8px; }
 .modal .m-detail { margin:8px 0; color:var(--muted); font-size:0.9em; }
 .modal .prediction {
   background:rgba(0,212,170,0.1); border-radius:10px; padding:16px;
@@ -805,8 +805,9 @@ function showMatch(id) {
       <div class="bet-row"><span>总进球推荐</span><span>${tg}</span></div>
       <div class="bet-row"><span>半全场推荐</span><span>${hf}</span></div>
       <div class="bet-row"><span>比分推荐</span><span>${sc}</span></div>
-      <p style="font-size:0.75em;color:var(--muted);margin-top:8px">⚠️ 赔率为国际盘口换算预估，实际以竞彩出票为准</p>
-        <button class="close" onclick="closeModal()">✕ 关闭</button>
+      <p style="font-size:0.75em;color:var(--muted);margin-top:4px">⚠️ 赔率为国际盘口换算预估，实际以竞彩出票为准</p>
+    </div>
+    <button class="close" onclick="closeModal()">✕ 关闭</button>
   `;
   document.getElementById('modal').style.display = 'flex';
 }
