@@ -649,30 +649,70 @@ function renderTomorrow() {
 }
 
 function renderGroups() {
+  // Calculate actual standings from match results
+  const standings = {};
+  for (const g of Object.keys(GROUPS)) {
+    standings[g] = {};
+    for (const t of GROUPS[g].teams) {
+      standings[g][t] = { played:0, won:0, drawn:0, lost:0, gf:0, ga:0, pts:0 };
+    }
+  }
+  // Process matches with results
+  for (const m of MATCHES) {
+    if (!m.result || !m.group || !standings[m.group]) continue;
+    const [hs, as] = m.result.split(':').map(Number);
+    if (isNaN(hs) || isNaN(as)) continue;
+    const h = m.home, a = m.away;
+    const sg = standings[m.group];
+    if (sg[h]) {
+      sg[h].played++; sg[h].gf += hs; sg[h].ga += as;
+      if (hs > as) { sg[h].won++; sg[h].pts += 3; }
+      else if (hs === as) { sg[h].drawn++; sg[h].pts += 1; }
+      else { sg[h].lost++; }
+    }
+    if (sg[a]) {
+      sg[a].played++; sg[a].gf += as; sg[a].ga += hs;
+      if (as > hs) { sg[a].won++; sg[a].pts += 3; }
+      else if (as === hs) { sg[a].drawn++; sg[a].pts += 1; }
+      else { sg[a].lost++; }
+    }
+  }
+  // Sort each group by pts, then GD, then GF
+  const sorted = {};
+  for (const g of Object.keys(GROUPS)) {
+    sorted[g] = GROUPS[g].teams.slice().sort((a,b) => {
+      const sa = standings[g][a], sb = standings[g][b];
+      if (sb.pts !== sa.pts) return sb.pts - sa.pts;
+      const gdA = sa.gf - sa.ga, gdB = sb.gf - sb.ga;
+      if (gdB !== gdA) return gdB - gdA;
+      return sb.gf - sa.gf;
+    });
+  }
+
   let html = '<div class="groups-grid">';
   for (const [g, info] of Object.entries(GROUPS)) {
     html += `<div class="group-card" style="border-top-color:${info.color}">
       <h3><span>${info.name}</span><span style="color:${info.color}">▼</span></h3>
       <table>
-        <tr><th>#</th><th>球队</th><th style="text-align:center">赛</th><th style="text-align:center">胜</th><th style="text-align:center">平</th><th style="text-align:center">负</th><th style="text-align:center">积分</th></tr>`;
-    info.teams.forEach((t, i) => {
+        <tr><th>#</th><th>球队</th><th style="text-align:center">赛</th><th style="text-align:center">胜</th><th style="text-align:center">平</th><th style="text-align:center">负</th><th style="text-align:center">得失</th><th style="text-align:center">积分</th></tr>`;
+    sorted[g].forEach((t, i) => {
+      const s = standings[g][t];
       const cls = i < 2 ? 'q' : (i === 2 ? 'po' : '');
+      const hasPlayed = s.played > 0;
       html += `<tr>
         <td><span class="rank ${cls}">${i+1}</span></td>
         <td>${flag(t)} ${t}</td>
-        <td style="text-align:center;color:var(--muted)">0</td>
-        <td style="text-align:center;color:var(--muted)">0</td>
-        <td style="text-align:center;color:var(--muted)">0</td>
-        <td style="text-align:center;color:var(--muted)">0</td>
-        <td style="text-align:center;font-weight:700">0</td>
+        <td style="text-align:center;color:var(--muted)">${s.played}</td>
+        <td style="text-align:center;color:var(--muted)">${s.won}</td>
+        <td style="text-align:center;color:var(--muted)">${s.drawn}</td>
+        <td style="text-align:center;color:var(--muted)">${s.lost}</td>
+        <td style="text-align:center;color:var(--muted)">${hasPlayed ? s.gf+':'+s.ga : '-'}</td>
+        <td style="text-align:center;font-weight:700">${s.pts}</td>
       </tr>`;
     });
     html += '</table></div>';
   }
   html += '</div>';
-  html += `<p style="text-align:center;color:var(--muted);margin-top:16px;font-size:0.85em">
-    🟢 前2名直接晋级 | 🟡 第3名有望争8个最佳第三 | 赛前初始排序
-  </p>`;
   return html;
 }
 
