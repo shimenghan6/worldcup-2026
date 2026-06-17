@@ -96,6 +96,13 @@ def update_json(data):
         expected = '胜' if h <= min(draw, a) else ('负' if a <= min(h, draw) else '平')
         if tip != expected:
             match['tip'] = expected
+            # Also fix derived fields to match
+            if expected == '胜':
+                match['htft'] = '胜-胜/平-胜'
+                match['score'] = '2:0/1:0'
+            elif expected == '负':
+                match['htft'] = '负-负/平-负'
+                match['score'] = '0:1/0:2'
             log(f"tip自动修正: id={match['id']} {match.get('home','?')}vs{match.get('away','?')} {tip}->{expected} (SPF={spf})")
             fixed_tips += 1
     if fixed_tips: log(f"tip一致性修正: {fixed_tips}场")
