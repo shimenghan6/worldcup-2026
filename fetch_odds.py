@@ -83,6 +83,23 @@ def update_json(data):
                     updated_count += 1
         log(f"SPF赔率更新: {updated_count}场 (跳过{skipped_finished}场已完赛)")
 
+    # SPF-tip一致性校验: SPF更新后检查tip是否和赔率一致
+    fixed_tips = 0
+    for match in d.get('matches', []):
+        spf = match.get('spf', '')
+        tip = match.get('tip', '')
+        if not spf or not tip or spf == '待定' or tip == '待定': continue
+        parts = spf.split('/')
+        if len(parts) != 3: continue
+        try: h, draw, a = float(parts[0]), float(parts[1]), float(parts[2])
+        except: continue
+        expected = '胜' if h <= min(draw, a) else ('负' if a <= min(h, draw) else '平')
+        if tip != expected:
+            match['tip'] = expected
+            log(f"tip自动修正: id={match['id']} {match.get('home','?')}vs{match.get('away','?')} {tip}->{expected} (SPF={spf})")
+            fixed_tips += 1
+    if fixed_tips: log(f"tip一致性修正: {fixed_tips}场")
+
     if wc:
         d['source'] = f"竞彩官方API实时赔率(自动抓取 {now})"
         d['note'] = f"每小时自动抓取竞彩官方API | SPF更新:{updated_count}场"
