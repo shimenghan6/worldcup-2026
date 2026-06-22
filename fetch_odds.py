@@ -209,7 +209,7 @@ def check_coverage():
         'D2_阵型': lambda i: bool(re.search(r'\d-\d-\d', i)),
         'D3_矛盾': lambda i: '🔥' in i,
         'D4_外界': lambda i: '🌍' in i,
-        'D5_近5场': lambda i: bool(re.search(r'近\d场', i)),
+        'D5_近期状态': lambda i: bool(re.search(r'近\d场|首战|上轮', i)),
         'D6_H2H': lambda i: 'H2H' in i,
         'D7_排名': lambda i: bool(re.search(r'#\d+', i)),
         'D8_位置': lambda i: bool(re.search(r'[🅕🅜🅓🅖]', i)),
