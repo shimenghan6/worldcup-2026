@@ -5,7 +5,7 @@
 需要: pip install requests
 GitHub Token: 在 ~/.github/pat 文件里放一行 Personal Access Token
 """
-import json, os, sys, subprocess, io, requests, base64
+import json, os, sys, subprocess, io, requests, base64, re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -195,6 +195,50 @@ def fetch_results():
         log(f"赛果更新总计: {updated}场")
     return updated
 
+def check_coverage():
+    """检查11维度覆盖率，低于阈值写入告警文件"""
+    if not DATA.exists(): return
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 72 and m.get('spf') != '待定']
+    if not upcoming: return
+    
+    total = len(upcoming)
+    dims = {
+        'D1_伤病标注': lambda i: bool(re.search(r'[❌✅⚠️]', i)),
+        'D2_阵型': lambda i: bool(re.search(r'\d-\d-\d', i)),
+        'D3_矛盾': lambda i: '🔥' in i,
+        'D4_外界': lambda i: '🌍' in i,
+        'D5_近5场': lambda i: bool(re.search(r'近\d场', i)),
+        'D6_H2H': lambda i: 'H2H' in i,
+        'D7_排名': lambda i: bool(re.search(r'#\d+', i)),
+        'D8_位置': lambda i: bool(re.search(r'[🅕🅜🅓🅖]', i)),
+        'D10_双向': lambda i: '|' in i and i.count('|') >= 3,
+        'D11_上轮': lambda i: bool(re.search(r'上轮|首轮|首战', i)),
+    }
+    
+    results = {}
+    for name, check in dims.items():
+        count = sum(1 for m in upcoming if m.get('injury') and check(m['injury']))
+        pct = count / total * 100 if total else 0
+        results[name] = pct
+    
+    weak = [f'{k}={v:.0f}%' for k, v in results.items() if v < 50]
+    avg = sum(results.values()) / len(results)
+    
+    alert_file = REPO / '.needs_ai_refresh'
+    if weak or avg < 60:
+        msg = f"维度覆盖率告警: 平均{avg:.0f}% | 弱项: {', '.join(weak)}"
+        alert_file.write_text(msg, encoding='utf-8')
+        log(f"🔴 {msg}")
+    elif alert_file.exists():
+        alert_file.unlink()
+        log("🟢 维度覆盖率恢复")
+    
+    d['dimension_coverage'] = {k: f'{v:.0f}%' for k, v in results.items()}
+    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    log(f"维度覆盖: 平均{avg:.0f}% (弱项:{len(weak)}项)")
+    return avg < 60  # returns True if needs AI refresh
+
 def upload_github():
     """通过GitHub REST API直传data.json(免git)"""
     token = get_token()
@@ -236,6 +280,9 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
+        needs_ai = check_coverage()
+        if needs_ai:
+            log("⚠️ 维度覆盖率不足! 运行lottery-analyzer刷新预测")
         upload_github()
 
     log("完成")
