@@ -118,79 +118,81 @@ def update_json(data):
     return True
 
 def fetch_results():
-    """从竞彩直播API抓取世界杯赛果(含半场比分),写入data.json"""
-    url = "https://webapi.sporttery.cn/gateway/uniform/fb/getMatchLiveV1.qry?matchIds=&eventTc=goals,penalty_shootout&method=live"
-    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.sporttery.cn/jc/zqbfzb/", "Accept": "application/json"}
-
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        log(f"赛果API请求失败: {e}")
-        return 0
-
-    # (中文名, 对手中文名) → match id (竞彩API返回中文队名)
-    team_to_id = {
-        ('墨西哥','南非'):1, ('韩国','捷克'):2,
-        ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
-        ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6,
-        ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
-        ('德国','库拉索'):9, ('荷兰','日本'):10,
-        ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
-        ('西班牙','佛得角'):13, ('比利时','埃及'):14,
-        ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
-        ('法国','塞内加尔'):17, ('伊拉克','挪威'):18,
-        ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
-        ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22,
-        ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
-    }
-    swap = {(b,a):v for (a,b),v in team_to_id.items()}
-    team_to_id.update(swap)
-
+    """从 worldcup26.ir API 抓取全部赛果(覆盖整个赛事,无时间窗口限制) + 竞彩API兜底"""
+    import re
+    updated = 0
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
-    updated = 0
 
-    for m in data.get('value', []):
-        if m.get('matchStatusName') != '已完成': continue
-        home = m.get('homeTeamAllName', '')
-        away = m.get('awayTeamAllName', '')
-        mid = team_to_id.get((home, away))
-        if not mid: continue
-
-        result = m.get('sectionsNo999', '')  # 全场
-        ht = m.get('sectionsNo1', '')        # 半场
-        match = d['matches'][mid-1]
-        changed = False
-        if result and not match.get('result'):
-            match['result'] = result; changed = True
-        if ht and not match.get('ht_result'):
-            match['ht_result'] = ht; changed = True
-        if changed:
-            updated += 1
-            log(f"赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
-
-    # Fallback: parse postMatch text for results missed by sporttery API
+    # === 主源: worldcup26.ir (全赛事覆盖, 40+场) ===
     try:
-        import re
-        for match in d['matches']:
-            if match.get('result') or not match.get('postMatch'): continue
-            pm = match['postMatch']
-            # Extract score from postMatch like "德国7-1库拉索" or "西班牙0-0佛得角"
-            scores = re.findall(r'(\d+)[-:](\d+)', pm.split(':',1)[-1] if ':' in pm else pm)
-            if scores:
-                result = f'{scores[0][0]}:{scores[0][1]}'
-                match['result'] = result
+        resp = requests.get("https://worldcup26.ir/get/games", headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+        resp.raise_for_status()
+        wc_data = resp.json()
+        games = wc_data.get('games', wc_data)
+        if isinstance(games, dict): games = list(games.values())
+        
+        for g in games:
+            if str(g.get('finished', '')).upper() != 'TRUE': continue
+            gid = int(g.get('id', 0))
+            if gid < 1 or gid > 104: continue
+            match = d['matches'][gid - 1]
+            hs = g.get('home_score', ''); aws = g.get('away_score', '')
+            if hs == '' or aws == '' or hs is None or aws is None: continue
+            result = f'{hs}-{aws}'
+            
+            # Also get half-time from scorers field (format varies)
+            changed = False
+            if not match.get('result') or match.get('result') != result.replace('-', ':'):
+                match['result'] = result.replace('-', ':')
+                changed = True
+            if changed:
                 updated += 1
-                log(f'postMatch赛果: id={match["id"]} {result}')
-        log(f'赛果更新(含postMatch): {updated}场')
+                log(f"worldcup26赛果: id={gid} {result}")
+        log(f"worldcup26.ir赛果更新: {updated}场")
     except Exception as e:
-        log(f'postMatch fallback: {e}')
+        log(f"worldcup26.ir API失败: {e}")
+
+    # === 兜底: 竞彩 live API (最近几场) ===
+    try:
+        url = "https://webapi.sporttery.cn/gateway/uniform/fb/getMatchLiveV1.qry?matchIds=&eventTc=goals,penalty_shootout&method=live"
+        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.sporttery.cn/jc/zqbfzb/", "Accept": "application/json"}
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        live_data = resp.json()
+        
+        team_to_id = {
+            ('墨西哥','南非'):1, ('韩国','捷克'):2, ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
+            ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6, ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
+            ('德国','库拉索'):9, ('荷兰','日本'):10, ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
+            ('西班牙','佛得角'):13, ('比利时','埃及'):14, ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
+            ('法国','塞内加尔'):17, ('伊拉克','挪威'):18, ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
+            ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22, ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
+        }
+        swap = {(b,a):v for (a,b),v in team_to_id.items()}
+        team_to_id.update(swap)
+        
+        for m in live_data.get('value', []):
+            if m.get('matchStatusName') != '已完成': continue
+            home = m.get('homeTeamAllName', ''); away = m.get('awayTeamAllName', '')
+            mid = team_to_id.get((home, away))
+            if not mid: continue
+            result = m.get('sectionsNo999', ''); ht = m.get('sectionsNo1', '')
+            match = d['matches'][mid - 1]
+            changed = False
+            if result and not match.get('result'):
+                match['result'] = result; changed = True
+            if ht and not match.get('ht_result'):
+                match['ht_result'] = ht; changed = True
+            if changed:
+                updated += 1
+                log(f"竞彩赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
+    except Exception as e:
+        log(f"竞彩赛果API: {e}")
 
     if updated:
         DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
-        log(f"赛果更新: {updated}场")
+        log(f"赛果更新总计: {updated}场")
     return updated
 
 def upload_github():
