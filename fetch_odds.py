@@ -124,31 +124,56 @@ def fetch_results():
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
 
-    # === 主源: worldcup26.ir (全赛事覆盖, 40+场) ===
+    # === 主源: worldcup26.ir (全赛事覆盖) ===
+    # 注意: API的game ID ≠ 我们的match ID! 必须用小组+轮次+主队名匹配
     try:
+        # 先获取队名映射
+        team_resp = requests.get("https://worldcup26.ir/get/teams", headers={"User-Agent": "Mozilla/5.0"}, timeout=10, verify=False)
+        team_data = team_resp.json()
+        teams_list = team_data.get('teams', team_data)
+        if isinstance(teams_list, dict): teams_list = list(teams_list.values())
+        api_team = {str(t['id']): t.get('name_en', '?') for t in teams_list}
+
+        # 构建 (group, matchday, home_en_name) → our_match_id 映射
+        EN_MAP = {
+            ('A','1','Mexico'):1,('A','1','South Korea'):2,('B','1','Canada'):3,('D','1','United States'):4,
+            ('B','1','Qatar'):5,('C','1','Brazil'):6,('C','1','Haiti'):7,('D','1','Australia'):8,
+            ('E','1','Germany'):9,('F','1','Netherlands'):10,('E','1',"Cote d'Ivoire"):11,('F','1','Sweden'):12,
+            ('H','1','Spain'):13,('G','1','Belgium'):14,('H','1','Saudi Arabia'):15,('G','1','Iran'):16,
+            ('I','1','France'):17,('I','1','Iraq'):18,('J','1','Argentina'):19,('J','1','Austria'):20,
+            ('K','1','Portugal'):21,('L','1','England'):22,('K','1','Uzbekistan'):23,('L','1','Ghana'):24,
+            ('A','2','Czech Republic'):25,('B','2','Switzerland'):26,('B','2','Canada'):27,('A','2','Mexico'):28,
+            ('C','2','Brazil'):29,('C','2','Scotland'):30,('D','2','United States'):31,('D','2','Turkiye'):32,
+            ('E','2','Germany'):33,('E','2','Ecuador'):34,('F','2','Netherlands'):35,('F','2','Tunisia'):36,
+            ('G','2','Belgium'):37,('G','2','New Zealand'):38,('H','2','Spain'):39,('H','2','Uruguay'):40,
+            ('I','2','France'):41,('I','2','Norway'):42,('J','2','Argentina'):43,('J','2','Jordan'):44,
+            ('K','2','Portugal'):45,('L','2','England'):46,('L','2','Panama'):47,('K','2','Colombia'):48,
+        }
+
         resp = requests.get("https://worldcup26.ir/get/games", headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
         resp.raise_for_status()
         wc_data = resp.json()
         games = wc_data.get('games', wc_data)
         if isinstance(games, dict): games = list(games.values())
-        
+
         for g in games:
             if str(g.get('finished', '')).upper() != 'TRUE': continue
-            gid = int(g.get('id', 0))
-            if gid < 1 or gid > 104: continue
-            match = d['matches'][gid - 1]
+            home_en = api_team.get(str(g.get('home_team_id', '')), '')
+            group = g.get('group', '?')
+            matchday = str(g.get('matchday', '1'))
+            key = (group, matchday, home_en)
+            our_id = EN_MAP.get(key)
+            if not our_id: continue
+
+            match = d['matches'][our_id - 1]
             hs = g.get('home_score', ''); aws = g.get('away_score', '')
             if hs == '' or aws == '' or hs is None or aws is None: continue
             result = f'{hs}-{aws}'
-            
-            # Also get half-time from scorers field (format varies)
-            changed = False
+
             if not match.get('result') or match.get('result') != result.replace('-', ':'):
                 match['result'] = result.replace('-', ':')
-                changed = True
-            if changed:
                 updated += 1
-                log(f"worldcup26赛果: id={gid} {result}")
+                log(f"worldcup26赛果: our_id={our_id} {result} (API_id={g.get('id')})")
         log(f"worldcup26.ir赛果更新: {updated}场")
     except Exception as e:
         log(f"worldcup26.ir API失败: {e}")
