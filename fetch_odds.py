@@ -199,6 +199,7 @@ def check_coverage():
     """检查11维度覆盖率，低于阈值写入告警文件"""
     if not DATA.exists(): return
     d = json.loads(DATA.read_text(encoding='utf-8'))
+    # 检查所有即将到来的比赛(小组赛id≤72, 未出赛果)
     upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 72 and m.get('spf') != '待定']
     if not upcoming: return
     
@@ -280,9 +281,13 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
-        needs_ai = check_coverage()
-        if needs_ai:
-            log("⚠️ 维度覆盖率不足! 运行lottery-analyzer刷新预测")
+        # 维度检查每天只跑一次(避免每小时重复告警)
+        from datetime import datetime as dt
+        now_hour = dt.now().hour
+        if now_hour in (8, 20):  # 每天8点+20点各跑一次
+            needs_ai = check_coverage()
+            if needs_ai:
+                log("⚠️ 维度覆盖率不足! 运行lottery-analyzer刷新预测")
         upload_github()
 
     log("完成")
