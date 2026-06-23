@@ -5,7 +5,7 @@
 需要: pip install requests
 GitHub Token: 在 ~/.github/pat 文件里放一行 Personal Access Token
 """
-import json, os, sys, subprocess, io, requests, base64, re
+import json, os, sys, subprocess, io, requests, base64, re, re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -118,31 +118,37 @@ def update_json(data):
     return True
 
 def fetch_results():
-    """从 worldcup26.ir API 抓取全部赛果(覆盖整个赛事,无时间窗口限制) + 竞彩API兜底"""
-    import re
+    """三层赛果保障: 竞彩实时API + postMatch持久化 + 自愈校验"""
     updated = 0
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
 
-    # === 仅用竞彩 live API (稳定可靠) ===
+    # Layer 1: 竞彩live API (实时窗口~48小时)
+    team_to_id = {
+        ('墨西哥','南非'):1, ('韩国','捷克'):2, ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
+        ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6, ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
+        ('德国','库拉索'):9, ('荷兰','日本'):10, ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
+        ('西班牙','佛得角'):13, ('比利时','埃及'):14, ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
+        ('法国','塞内加尔'):17, ('伊拉克','挪威'):18, ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
+        ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22, ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
+        # Round 2+
+        ('捷克','南非'):25, ('瑞士','波黑'):26, ('加拿大','卡塔尔'):27, ('墨西哥','韩国'):28,
+        ('美国','澳大利亚'):29, ('苏格兰','摩洛哥'):30, ('巴西','海地'):31, ('土耳其','巴拉圭'):32,
+        ('荷兰','瑞典'):33, ('德国','科特迪瓦'):34, ('厄瓜多尔','库拉索'):35, ('突尼斯','日本'):36,
+        ('西班牙','沙特阿拉伯'):37, ('比利时','伊朗'):38, ('乌拉圭','佛得角'):39, ('新西兰','埃及'):40,
+        ('阿根廷','奥地利'):41, ('法国','伊拉克'):42, ('挪威','塞内加尔'):43, ('约旦','阿尔及利亚'):44,
+        ('葡萄牙','乌兹别克斯坦'):45, ('英格兰','加纳'):46, ('巴拿马','克罗地亚'):47, ('哥伦比亚','刚果(金)'):48,
+    }
+    swap = {(b,a):v for (a,b),v in team_to_id.items()}
+    team_to_id.update(swap)
+
     try:
         url = "https://webapi.sporttery.cn/gateway/uniform/fb/getMatchLiveV1.qry?matchIds=&eventTc=goals,penalty_shootout&method=live"
         headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.sporttery.cn/jc/zqbfzb/", "Accept": "application/json"}
         resp = requests.get(url, headers=headers, timeout=10)
         resp.raise_for_status()
         live_data = resp.json()
-        
-        team_to_id = {
-            ('墨西哥','南非'):1, ('韩国','捷克'):2, ('加拿大','波黑'):3, ('美国','巴拉圭'):4,
-            ('卡塔尔','瑞士'):5, ('巴西','摩洛哥'):6, ('海地','苏格兰'):7, ('澳大利亚','土耳其'):8,
-            ('德国','库拉索'):9, ('荷兰','日本'):10, ('科特迪瓦','厄瓜多尔'):11, ('瑞典','突尼斯'):12,
-            ('西班牙','佛得角'):13, ('比利时','埃及'):14, ('沙特阿拉伯','乌拉圭'):15, ('伊朗','新西兰'):16,
-            ('法国','塞内加尔'):17, ('伊拉克','挪威'):18, ('阿根廷','阿尔及利亚'):19, ('奥地利','约旦'):20,
-            ('葡萄牙','民主刚果'):21, ('英格兰','克罗地亚'):22, ('加纳','巴拿马'):23, ('乌兹别克斯坦','哥伦比亚'):24,
-        }
-        swap = {(b,a):v for (a,b),v in team_to_id.items()}
-        team_to_id.update(swap)
-        
+
         for m in live_data.get('value', []):
             if m.get('matchStatusName') != '已完成': continue
             home = m.get('homeTeamAllName', ''); away = m.get('awayTeamAllName', '')
@@ -150,20 +156,47 @@ def fetch_results():
             if not mid: continue
             result = m.get('sectionsNo999', ''); ht = m.get('sectionsNo1', '')
             match = d['matches'][mid - 1]
-            changed = False
             if result and not match.get('result'):
-                match['result'] = result; changed = True
+                match['result'] = result; updated += 1
+                log(f"Layer1竞彩: id={mid} {home} {result} vs {away}")
             if ht and not match.get('ht_result'):
-                match['ht_result'] = ht; changed = True
-            if changed:
-                updated += 1
-                log(f"竞彩赛果: {home} {result} (HT:{ht}) vs {away} (id={mid})")
+                match['ht_result'] = ht
     except Exception as e:
-        log(f"竞彩赛果API: {e}")
+        log(f"Layer1竞彩API: {e}")
+
+    # Layer 2: postMatch文本持久化 (真相源,不受API窗口限制)
+    for match in d['matches']:
+        if match.get('result'): continue  # 已有赛果
+        pm = match.get('postMatch', '')
+        if not pm: continue
+        # 从postMatch提取比分 如"德国7-1库拉索"或"西班牙4-0沙特"
+        scores = re.findall(r'(\d+)[-:](\d+)', pm)
+        if not scores: continue
+        result = f'{scores[0][0]}:{scores[0][1]}'
+        match['result'] = result
+        updated += 1
+        log(f"Layer2持久化: id={match['id']} {result} (from postMatch)")
+
+    # Layer 3: 自愈 — result vs postMatch 一致性
+    fixed = 0
+    for match in d['matches']:
+        result = match.get('result', '')
+        pm = match.get('postMatch', '')
+        if not result or not pm: continue
+        scores = re.findall(r'(\d+)[-:](\d+)', pm)
+        if not scores: continue
+        pm_score = f'{scores[0][0]}:{scores[0][1]}'
+        if result != pm_score:
+            old = result
+            match['result'] = pm_score
+            fixed += 1
+            log(f"Layer3自愈: id={match['id']} {old}→{pm_score}")
+
+    if fixed: updated += fixed
 
     if updated:
         DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
-        log(f"赛果更新总计: {updated}场")
+        log(f"赛果更新: Layer1+{updated-fixed} Layer3+{fixed} = {updated}场")
     return updated
 
 def check_coverage():

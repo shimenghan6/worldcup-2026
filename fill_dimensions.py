@@ -3,11 +3,9 @@
 每天运行一次(建议8:00和20:00),自动从已有数据推算11维度
 无需AI搜索,纯数据驱动
 """
-import json, re, sys, io
+import json, re
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 REPO = Path(__file__).parent
 DATA = REPO / "data.json"
