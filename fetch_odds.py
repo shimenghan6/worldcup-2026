@@ -252,13 +252,16 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
-        # 维度检查每天只跑一次(避免每小时重复告警)
+        # 每天8/20点: 自动维度填充+自测
         from datetime import datetime as dt
         now_hour = dt.now().hour
-        if now_hour in (8, 20):  # 每天8点+20点各跑一次
-            needs_ai = check_coverage()
-            if needs_ai:
-                log("⚠️ 维度覆盖率不足! 运行lottery-analyzer刷新预测")
+        if now_hour in (8, 20):
+            log("=== 每日维度填充 ===")
+            try:
+                import fill_dimensions
+                fill_dimensions.fill_dimensions()
+            except Exception as e:
+                log(f"维度填充失败: {e}")
         upload_github()
 
     log("完成")
