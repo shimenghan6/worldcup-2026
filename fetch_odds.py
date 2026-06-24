@@ -285,16 +285,14 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
-        # 每天8/20点: 自动维度填充+自测
-        from datetime import datetime as dt
-        now_hour = dt.now().hour
-        if now_hour in (8, 20):
-            log("=== 每日维度填充 ===")
-            try:
-                import fill_dimensions
-                fill_dimensions.fill_dimensions()
-            except Exception as e:
-                log(f"维度填充失败: {e}")
+        # 每次运行轻量检查,维度不足时自动填充
+        try:
+            import fill_dimensions
+            ok = fill_dimensions.fill_dimensions()
+            if not ok:
+                log("⚠️ 维度仍不完整,需人工检查")
+        except Exception as e:
+            log(f"维度填充失败: {e}")
         upload_github()
 
     log("完成")

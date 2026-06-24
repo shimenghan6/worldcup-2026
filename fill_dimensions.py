@@ -70,7 +70,8 @@ def fill_dimensions():
     today = datetime.now(TZ).date()
     target_dates = {today.isoformat(), (today+timedelta(days=1)).isoformat(), (today+timedelta(days=2)).isoformat()}
 
-    upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 72 and m.get('spf') != '待定']
+    # 所有小组赛(≤72)且未完赛的都检查，无论SPF是否开放
+    upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 72]
 
     # 按id排序，优先近3天
     upcoming.sort(key=lambda m: (0 if m.get('id', 99) <= 48 else 1, m['id']))
@@ -150,7 +151,7 @@ def fill_dimensions():
 
     # === 自测 ===
     d2 = json.loads(DATA.read_text(encoding='utf-8'))
-    upcoming2 = [m for m in d2['matches'] if not m.get('result') and m['id'] <= 72 and m.get('spf') != '待定']
+    upcoming2 = [m for m in d2['matches'] if not m.get('result') and m['id'] <= 72]
 
     all_pass = True
     for m in upcoming2:
