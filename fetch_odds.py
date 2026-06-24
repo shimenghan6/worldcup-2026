@@ -270,9 +270,21 @@ def upload_github():
     else:
         log(f"❌ 上传失败: {r.status_code} {r.text[:100]}")
 
+def in_betting_hours():
+    """竞彩销售时间: 周一至周五11:00-22:00, 周六日11:00-23:00. 非营业时间跳过抓取."""
+    now = datetime.now(timezone(timedelta(hours=8)))
+    h = now.hour
+    wd = now.weekday()  # 0=Mon, 6=Sun
+    close_hour = 23 if wd >= 5 else 22  # 周末23点, 工作日22点
+    return 11 <= h < close_hour
+
 def main():
     log("=== 世界杯赔率抓取 ===")
     if DRY: log("DRY-RUN模式")
+
+    if not in_betting_hours():
+        log(f"非竞彩营业时间(当前{datetime.now(timezone(timedelta(hours=8))).strftime('%H:%M')}), 跳过")
+        return
 
     data = fetch()
     if data:
