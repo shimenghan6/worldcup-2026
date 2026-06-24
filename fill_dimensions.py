@@ -12,7 +12,7 @@ DATA = REPO / "data.json"
 HTML = REPO / "index.html"
 TZ = timezone(timedelta(hours=8))
 
-def log(msg): print(f"[{datetime.now(TZ).strftime('%H:%M:%S')}] {msg}")
+def log(msg): print(f"[{datetime.now(TZ).strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def load_rank():
     """从index.html提取FIFA排名"""
@@ -145,9 +145,50 @@ def fill_dimensions():
         m['injury'] = new_inj
         filled += 1
 
-    if filled > 0:
-        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
-        log(f"维度填充: {filled}场")
+    # === 自动填充预测字段(tip/score/htft/goals/level) ===
+    # 任何待赛比赛中预测字段为空/待定的，都自动推算
+    pred_filled = 0
+    for m in upcoming:
+        tip = m.get('tip', '')
+        # 只填充缺失的预测
+        if tip and tip != '待定' and m.get('score') and m.get('score') != '':
+            continue
+
+        home = m.get('home', '?'); away = m.get('away', '?')
+        home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
+        spf = m.get('spf', '')
+
+        # 从SPF或排名推算tip
+        if spf and spf != '待定' and '/' in spf:
+            parts = spf.split('/')
+            try:
+                h, d, a = float(parts[0]), float(parts[1]), float(parts[2])
+                if h <= min(d, a): m['tip'] = '胜'
+                elif a <= min(h, d): m['tip'] = '负'
+                else: m['tip'] = '平'
+            except: m['tip'] = '胜' if home_rank < away_rank else ('负' if away_rank < home_rank else '平')
+        else:
+            m['tip'] = '胜' if home_rank < away_rank else ('负' if away_rank < home_rank else '平')
+
+        # 推算level
+        rank_gap = abs(home_rank - away_rank)
+        if rank_gap > 30: m['level'] = '🟢铁胆'
+        elif rank_gap > 15: m['level'] = '🟡稳胆'
+        elif rank_gap > 5: m['level'] = '🟠大概率'
+        else: m['level'] = '🔵中等'
+
+        # 推算比分/半全场/总进球
+        if m['tip'] == '胜':
+            m['score'] = '2:0/1:0'; m['htft'] = '胜-胜/平-胜'; m['totalGoals'] = '2球/1球'
+        elif m['tip'] == '负':
+            m['score'] = '0:1/0:2'; m['htft'] = '负-负/平-负'; m['totalGoals'] = '2球/1球'
+        else:
+            m['score'] = '1:1/0:0'; m['htft'] = '平平/平-平'; m['totalGoals'] = '1球/2球'
+        pred_filled += 1
+
+    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    if filled: log(f"维度填充: {filled}场")
+    if pred_filled: log(f"预测填充: {pred_filled}场")
 
     # === 自测 ===
     d2 = json.loads(DATA.read_text(encoding='utf-8'))
@@ -195,7 +236,7 @@ def fill_dimensions():
             all_pass = False
 
     if all_pass:
-        log(f"✅ 自测通过: {total}场均100%覆盖")
+        log(f"[PASS] 自测通过: {total}场均100%覆盖")
     else:
         log(f"🔴 自测失败: 维度不全!")
 
