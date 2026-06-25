@@ -83,7 +83,13 @@ def fill_dimensions():
         away = m.get('away', '?')
         inj = m.get('injury', '')
 
-        # 跳过已经完整填充的
+        # 模板 vs 真实判断:
+        # 模板: 同时包含'队长'+'组织核心'+'防守核心' = fill_dimensions自己生成的泛化标签
+        # 真实: 不包含这三个泛化标签 且 长度>120字 = web搜索到的具体情报
+        is_template = all(x in inj for x in ['队长', '组织核心', '防守核心'])
+        has_real = (not is_template) and len(inj) > 60
+
+        # 8维完整性检查
         has_all = all([
             bool(re.search(r'[❌✅⚠️]', inj)),  # D1
             bool(re.search(r'\d-\d-\d', inj)),   # D2
@@ -94,8 +100,10 @@ def fill_dimensions():
             bool(re.search(r'#\d+', inj)),        # D7
             bool(re.search(r'[🅕🅜🅓🅖]', inj)), # D8
         ])
-        if has_all:
+        # 有真实情报+8维完整 → 跳过不碰(保护web搜索成果)
+        if has_all and has_real:
             continue
+        # 只有模板数据 → 允许fill_dimensions补充(模板比空着强)
 
         # 获取排名
         home_rank = ranks.get(home, 50)
