@@ -198,6 +198,28 @@ def fill_dimensions():
     if filled: log(f"维度填充: {filled}场")
     if pred_filled: log(f"预测填充: {pred_filled}场")
 
+    # === 积分一致性校验(防止主客场反转) ===
+    schedule_data = load_schedule()
+    for gid in range(1, 73):
+        m = d['matches'][gid - 1]
+        if not m.get('result'): continue
+        # Check: result and postMatch should agree on winner
+        pm = m.get('postMatch', '')
+        result = m.get('result', '')
+        if not pm or not result: continue
+        parts = result.split(':')
+        if len(parts) != 2: continue
+        try: hs, aws = int(parts[0]), int(parts[1])
+        except: continue
+        # If postMatch contains home team name followed by losing score, result might be reversed
+        # Simple check: if result shows home win, postMatch should show home team name near the higher score
+        home = m.get('home', '')
+        away = m.get('away', '')
+        if hs > aws:
+            # Home won - postMatch should show home team winning
+            if away and f'{away}{hs}' in pm.replace('-','').replace(':','').replace(' ',''):
+                log(f"[WARN] id={gid} result={result} but postMatch suggests {away} scored {hs}")
+
     # === 自测 ===
     d2 = json.loads(DATA.read_text(encoding='utf-8'))
     upcoming2 = [m for m in d2['matches'] if not m.get('result') and m['id'] <= 72]
