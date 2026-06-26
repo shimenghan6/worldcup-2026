@@ -891,6 +891,9 @@ function render(view) {
   } else if (view === 'analysis') {
     document.getElementById('filterBar').innerHTML = '';
     document.getElementById('matchArea').innerHTML = renderAnalysis();
+  } else if (view === 'bracket') {
+    document.getElementById('filterBar').innerHTML = '';
+    document.getElementById('matchArea').innerHTML = renderBracket();
   }
 }
 
