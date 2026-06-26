@@ -212,6 +212,15 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   .odds-row span { font-size:0.75em; }
   .result-score { font-size:1.1em; }
 }
+
+.bracket-tree { display:flex; gap:8px; overflow-x:auto; padding:16px 0; }
+.bracket-col { display:flex; flex-direction:column; gap:6px; min-width:180px; }
+.bracket-col h4 { color:var(--accent); font-size:0.85em; text-align:center; margin-bottom:4px; }
+.bracket-match { background:var(--card); border-radius:8px; padding:8px 12px; border:1px solid var(--border); text-align:center; font-size:0.82em; }
+.bracket-match .teams { font-weight:600; }
+.bracket-match .teams .winner { color:var(--accent); }
+.bracket-match .vs { color:var(--muted); font-size:0.8em; }
+.bracket-match .pred { font-size:0.7em; color:var(--gold); margin-top:2px; }
 </style>
 </head>
 <body>
@@ -900,6 +909,93 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
   updateFreshness();
   render('schedule');
 })();
+
+function renderBracket() {
+  // Calculate standings from MATCHES
+  const groups = {};
+  for (const [g, info] of Object.entries(GROUPS)) {
+    groups[g] = {};
+    for (const t of info.teams) groups[g][t] = {p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
+  }
+  for (const m of MATCHES) {
+    if (!m.result || !m.group) continue;
+    const [hs, as] = m.result.split(':').map(Number);
+    if (isNaN(hs) || isNaN(as)) continue;
+    const sg = groups[m.group];
+    if (!sg || !sg[m.home] || !sg[m.away]) continue;
+    sg[m.home].p++; sg[m.home].gf+=hs; sg[m.home].ga+=as;
+    sg[m.away].p++; sg[m.away].gf+=as; sg[m.away].ga+=hs;
+    if (hs>as) { sg[m.home].w++; sg[m.home].pts+=3; sg[m.away].l++; }
+    else if (hs===as) { sg[m.home].d++; sg[m.home].pts+=1; sg[m.away].d++; sg[m.away].pts+=1; }
+    else { sg[m.away].w++; sg[m.away].pts+=3; sg[m.home].l++; }
+  }
+  const sortTeams = (g) => Object.keys(groups[g]).sort((a,b) => {
+    const sa=groups[g][a], sb=groups[g][b];
+    if (sb.pts!==sa.pts) return sb.pts-sa.pts;
+    const gdA=sa.gf-sa.ga, gdB=sb.gf-sb.ga;
+    if (gdB!==gdA) return gdB-gdA;
+    return sb.gf-sa.gf;
+  });
+
+  const W={}, R={}, allThirds=[];
+  for (const g of Object.keys(GROUPS)) {
+    const s = sortTeams(g); W[g]=s[0]; R[g]=s[1];
+    if (s.length>=3) allThirds.push({g, team:s[2], ...groups[g][s[2]]});
+  }
+  allThirds.sort((a,b) => b.pts!==a.pts ? b.pts-a.pts : (b.gf-b.ga)!==(a.gf-a.ga) ? (b.gf-b.ga)-(a.gf-a.ga) : b.gf-a.gf);
+  
+  const get3rd = (groups) => {
+    for (const t of allThirds) {
+      if (groups.includes(t.g) && !t.used) { t.used=true; return t.team; }
+    }
+    return '待定';
+  };
+
+  const bracket = [
+    ['R32','A2', 'B2'],['R32','E1', '3AD'],['R32','F1', 'C2'],['R32','C1', 'F2'],
+    ['R32','I1', '3EH'],['R32','E2', 'I2'],['R32','A1', '3CF'],['R32','L1', '3IL'],
+    ['R32','D1', '3BG'],['R32','G1', '3AI'],['R32','K2', 'L2'],['R32','H1', 'J2'],
+    ['R32','B1', '3EH2'],['R32','J1', 'H2'],['R32','K1', '3DJ'],['R32','D2', 'G2'],
+  ];
+
+  const resolve = (code) => {
+    if (code.length===2 && code[1]==='1') return W[code[0]]||code;
+    if (code.length===2 && code[1]==='2') return R[code[0]]||code;
+    const map={'3AD':'ABCD','3CF':'CDEF','3BG':'BEFG','3EH':'EFGH','3EH2':'EFGH','3IL':'IJKL','3AI':'AEHI','3DJ':'DEIJ'};
+    return get3rd(map[code]||'ABCD');
+  };
+
+  let html = '<h3>🏆 32强对阵图</h3><div class="bracket-tree">';
+  const cols = [[0,1],[2,3,4,5],[6,7,8,9],[10,11,12,13],[14,15]];
+  for (const idxs of cols) {
+    html += '<div class="bracket-col">';
+    for (const i of idxs) {
+      const [stage, t1, t2] = bracket[i];
+      const team1 = resolve(t1); const team2 = resolve(t2);
+      html += '<div class="bracket-match">';
+      html += '<div class="teams"><span class="winner">' + flag(team1)+' '+team1 + '</span></div>';
+      html += '<div class="vs">VS</div>';
+      html += '<div class="teams">' + flag(team2)+' '+team2 + '</div>';
+      html += '<div class="pred">R32-'+(i+1)+'</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div><p style="color:var(--muted);font-size:0.75em;text-align:center;margin-top:8px">基于当前积分排名生成 | 3rd=最佳小组第三</p>';
+  return html;
+}
+
+function showView(v) {
+  if (v==='bracket') { document.getElementById('filterBar').innerHTML=''; document.getElementById('matchArea').innerHTML=renderBracket(); return; }
+  render(v);
+}
+
+// Patch showView into existing nav
+document.querySelectorAll('.nav-tabs button').forEach(b => {
+  const t = b.textContent.trim();
+  if (t.includes('对阵')) b.setAttribute('onclick', "showView('bracket')");
+});
+
 </script>
 </body>
 </html>
