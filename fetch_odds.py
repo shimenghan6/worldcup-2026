@@ -156,10 +156,32 @@ def fetch_results():
             if not mid: continue
             result = m.get('sectionsNo999', ''); ht = m.get('sectionsNo1', '')
             match = d['matches'][mid - 1]
-            if result and not match.get('result'):
-                match['result'] = result; updated += 1
+
+            # Gate 1: 日期验证 — 比赛必须已过 (API可能返回未来比赛标记为完成)
+            match_date_str = m.get('matchDate', '')  # e.g. '2026-06-27'
+            if match_date_str:
+                from datetime import date as dt_date
+                try:
+                    match_date = dt_date.fromisoformat(match_date_str)
+                    if match_date > dt_date.today():
+                        log(f"Gate1跳过: id={mid} 比赛日期{match_date_str}未到, API状态异常")
+                        continue
+                except: pass
+
+            # Gate 2: 比分验证 — 不能是空或无效格式
+            if not result or result.count('-') != 1:
+                continue
+            parts = result.split('-')
+            try:
+                hs, aws = int(parts[0]), int(parts[1])
+            except:
+                continue
+
+            # Gate 3: 写入结果 (已过所有校验)
+            if not match.get('result'):
+                match['result'] = f'{hs}:{aws}'; updated += 1
                 log(f"Layer1竞彩: id={mid} {home} {result} vs {away}")
-            if ht and not match.get('ht_result'):
+            if ht and not match.get('ht_result') and ht.count('-') == 1:
                 match['ht_result'] = ht
     except Exception as e:
         log(f"Layer1竞彩API: {e}")
