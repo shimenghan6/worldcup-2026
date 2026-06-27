@@ -7,7 +7,9 @@ import json, re, sys, io
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+# Only wrap stdout when run standalone (not imported by fetch_odds)
+if '__main__' == __name__:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 REPO = Path(__file__).parent
 DATA = REPO / "data.json"
