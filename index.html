@@ -915,26 +915,35 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
 })();
 
 function renderBracket() {
-  // Calculate standings from MATCHES
-  const groups = {};
-  for (const [g, info] of Object.entries(GROUPS)) {
-    groups[g] = {};
-    for (const t of info.teams) groups[g][t] = {p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
+  // Use the SAME standings calculation as renderGroups (verified correct)
+  const standings = {};
+  for (const g of Object.keys(GROUPS)) {
+    standings[g] = {};
+    for (const t of GROUPS[g].teams) standings[g][t] = {p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
   }
   for (const m of MATCHES) {
-    if (!m.result || !m.group) continue;
+    if (!m.result || !m.group || !standings[m.group]) continue;
     const [hs, as] = m.result.split(':').map(Number);
     if (isNaN(hs) || isNaN(as)) continue;
-    const sg = groups[m.group];
-    if (!sg || !sg[m.home] || !sg[m.away]) continue;
-    sg[m.home].p++; sg[m.home].gf+=hs; sg[m.home].ga+=as;
-    sg[m.away].p++; sg[m.away].gf+=as; sg[m.away].ga+=hs;
-    if (hs>as) { sg[m.home].w++; sg[m.home].pts+=3; sg[m.away].l++; }
-    else if (hs===as) { sg[m.home].d++; sg[m.home].pts+=1; sg[m.away].d++; sg[m.away].pts+=1; }
-    else { sg[m.away].w++; sg[m.away].pts+=3; sg[m.home].l++; }
+    const sg = standings[m.group];
+    // Match by team name (handle both exact and partial matches)
+    const findTeam = (name) => {
+      if (sg[name]) return name;
+      for (const t of Object.keys(sg)) {
+        if (name.includes(t) || t.includes(name)) return t;
+      }
+      return null;
+    };
+    const h = findTeam(m.home); const a = findTeam(m.away);
+    if (!h || !a) continue;
+    sg[h].p++; sg[h].gf+=hs; sg[h].ga+=as;
+    sg[a].p++; sg[a].gf+=as; sg[a].ga+=hs;
+    if (hs>as) { sg[h].w++; sg[h].pts+=3; sg[a].l++; }
+    else if (hs===as) { sg[h].d++; sg[h].pts+=1; sg[a].d++; sg[a].pts+=1; }
+    else { sg[a].w++; sg[a].pts+=3; sg[h].l++; }
   }
-  const sortTeams = (g) => Object.keys(groups[g]).sort((a,b) => {
-    const sa=groups[g][a], sb=groups[g][b];
+  const sortTeams = (g) => GROUPS[g].teams.slice().sort((a,b) => {
+    const sa=standings[g][a], sb=standings[g][b];
     if (sb.pts!==sa.pts) return sb.pts-sa.pts;
     const gdA=sa.gf-sa.ga, gdB=sb.gf-sb.ga;
     if (gdB!==gdA) return gdB-gdA;
