@@ -84,10 +84,13 @@ def fill_dimensions():
         inj = m.get('injury', '')
 
         # 模板 vs 真实判断:
-        # 模板: 同时包含'队长'+'组织核心'+'防守核心' = fill_dimensions自己生成的泛化标签
-        # 真实: 不包含这三个泛化标签 且 长度>120字 = web搜索到的具体情报
-        is_template = all(x in inj for x in ['队长', '组织核心', '防守核心'])
-        has_real = (not is_template) and len(inj) > 60
+        # 真实: 包含著名球员名(web搜索到的具体情报)
+        # 模板: 只有泛化标签(队长/组织核心/✅核心可出战等),无具体球员名
+        famous_players = ['梅西','C罗','姆巴佩','哈兰德','孙兴慜','维尼修斯','凯恩','贝林厄姆',
+                          '萨拉赫','德布劳内','内马尔','登贝莱','亚马尔','罗德里','范戴克',
+                          '莫德里奇','格瓦迪奥尔','绍切克','阿什拉夫','布努','戴维斯','大卫',
+                          '凯塞多','厄德高','久保','哲科','普利西奇','巴洛贡','麦金']
+        has_real = any(p in inj for p in famous_players) and len(inj) > 50
 
         # 8维完整性检查
         has_all = all([
@@ -256,6 +259,8 @@ def fill_dimensions():
     else:
         log(f"🔴 自测失败: 维度不全!")
 
+    real_fresh = sum(1 for m in upcoming2 if sum(1 for x in ["队长","组织核心","防守核心"] if x in m.get("injury","")) < 3)
+    log(f"真实情报: {real_fresh}/{total}")
     return all_pass
 
 if __name__ == '__main__':
