@@ -201,13 +201,21 @@ def fill_dimensions():
     # 任何待赛比赛中预测字段为空/待定的，都自动推算
     pred_filled = 0
     for m in upcoming:
+        home = m.get('home', '?'); away = m.get('away', '?')
+        home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
+
+        # Level: 始终基于排名差重新计算(不跳过 — level可能陈旧)
+        rank_gap = abs(home_rank - away_rank)
+        if rank_gap > 30: m['level'] = '🟢铁胆'
+        elif rank_gap > 15: m['level'] = '🟡稳胆'
+        elif rank_gap > 5: m['level'] = '🟠大概率'
+        else: m['level'] = '🔵中等'
+
         tip = m.get('tip', '')
-        # 只填充缺失的预测
+        # 只填充缺失的预测(tip/score/htft/goals), level已在上面更新
         if tip and tip != '待定' and m.get('score') and m.get('score') != '':
             continue
 
-        home = m.get('home', '?'); away = m.get('away', '?')
-        home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
         spf = m.get('spf', '')
 
         # 从SPF或排名推算tip
@@ -222,14 +230,7 @@ def fill_dimensions():
         else:
             m['tip'] = '胜' if home_rank < away_rank else ('负' if away_rank < home_rank else '平')
 
-        # 推算level
-        rank_gap = abs(home_rank - away_rank)
-        if rank_gap > 30: m['level'] = '🟢铁胆'
-        elif rank_gap > 15: m['level'] = '🟡稳胆'
-        elif rank_gap > 5: m['level'] = '🟠大概率'
-        else: m['level'] = '🔵中等'
-
-        # 推算比分/半全场/总进球
+        # 推算比分/半全场/总进球(基线)
         if m['tip'] == '胜':
             m['score'] = '2:0/1:0'; m['htft'] = '胜-胜/平-胜'; m['totalGoals'] = '2球/1球'
         elif m['tip'] == '负':
@@ -237,6 +238,138 @@ def fill_dimensions():
         else:
             m['score'] = '1:1/0:0'; m['htft'] = '平平/平-平'; m['totalGoals'] = '1球/2球'
         pred_filled += 1
+
+    # === 维度感知预测调整: 解析injury中全部11维度, 智能微调预测 ===
+    dim_adjusted = 0
+    for m in upcoming:
+        inj = m.get('injury', '')
+        if not inj or '|' not in inj: continue
+        sections = [s.strip() for s in inj.split('|')]
+        if len(sections) < 6: continue
+
+        home_sec = sections[0]  # 【Team#Rank】formation;tags;form
+        away_sec = sections[1]  # 【Team#Rank】formation;tags;form
+
+        # --- 解析D7排名 ---
+        home_rank = int(re.search(r'#(\d+)', home_sec).group(1)) if re.search(r'#(\d+)', home_sec) else 50
+        away_rank = int(re.search(r'#(\d+)', away_sec).group(1)) if re.search(r'#(\d+)', away_sec) else 50
+
+        # --- 解析D2阵型 ---
+        home_formation = re.search(r'(\d-\d-\d)', home_sec)
+        away_formation = re.search(r'(\d-\d-\d)', away_sec)
+        home_def, home_mid, home_fwd = (int(x) for x in home_formation.group(1).split('-')) if home_formation else (4,4,2)
+        away_def, away_mid, away_fwd = (int(x) for x in away_formation.group(1).split('-')) if away_formation else (4,4,2)
+
+        # --- 解析D1伤病: count ✅ (healthy) vs generic tags ---
+        home_healthy = len(re.findall(r'✅', home_sec))
+        away_healthy = len(re.findall(r'✅', away_sec))
+
+        # --- 解析D5近期状态 ---
+        home_form_match = re.search(r'近(\d+)场(\d+)胜(\d+)平(\d+)负(?:\(进(\d+)失(\d+)\))?', home_sec)
+        away_form_match = re.search(r'近(\d+)场(\d+)胜(\d+)平(\d+)负(?:\(进(\d+)失(\d+)\))?', away_sec)
+
+        home_form = None; away_form = None
+        if home_form_match:
+            g = home_form_match
+            n, w, d_, l = int(g[1]), int(g[2]), int(g[3]), int(g[4])
+            gf = int(g[5]) if g.lastindex and g.lastindex >= 5 else 0
+            ga = int(g[6]) if g.lastindex and g.lastindex >= 6 else 0
+            home_form = (n, w, d_, l, gf, ga)
+        if away_form_match:
+            g = away_form_match
+            n, w, d_, l = int(g[1]), int(g[2]), int(g[3]), int(g[4])
+            gf = int(g[5]) if g.lastindex and g.lastindex >= 5 else 0
+            ga = int(g[6]) if g.lastindex and g.lastindex >= 6 else 0
+            away_form = (n, w, d_, l, gf, ga)
+
+        # --- 解析D6 H2H ---
+        h2h_section = sections[4] if len(sections) > 4 else ''
+        h2h_home_adv = '占优' in h2h_section and home in h2h_section
+        h2h_away_adv = '占优' in h2h_section and away in h2h_section
+
+        # --- 解析D11上轮表现 ---
+        home_last = sections[-2] if len(sections) >= 2 else ''
+        away_last = sections[-1] if len(sections) >= 1 else ''
+        home_last_win = any(x in home_last for x in ['胜', '大胜'])
+        home_last_loss = '负' in home_last
+        away_last_win = any(x in away_last for x in ['胜', '大胜'])
+        away_last_loss = '负' in away_last
+
+        # --- 综合评分 ---
+        tip = m.get('tip', '胜')
+        home_score = 0; away_score = 0
+
+        # 排名 (D7): lower rank = better
+        home_score += max(0, 50 - home_rank) * 0.5
+        away_score += max(0, 50 - away_rank) * 0.5
+
+        # 状态 (D5): form points
+        if home_form:
+            home_score += home_form[1] * 3 + home_form[2] * 1  # 3pts per win
+            # Goal difference bonus
+            home_score += (home_form[4] - home_form[5]) * 0.5
+        if away_form:
+            away_score += away_form[1] * 3 + away_form[2] * 1
+            away_score += (away_form[4] - away_form[5]) * 0.5
+
+        # 伤病 (D1): full squad bonus
+        home_score += home_healthy * 2
+        away_score += away_healthy * 2
+
+        # 阵型 (D2): attacking bonus
+        if home_fwd >= 3: home_score += 1  # 3 forwards = attacking
+        if home_def >= 5: home_score -= 1  # 5 defenders = defensive
+        if away_fwd >= 3: away_score += 1
+        if away_def >= 5: away_score -= 1
+
+        # H2H (D6): historical advantage
+        if h2h_home_adv: home_score += 2
+        if h2h_away_adv: away_score += 2
+
+        # 上轮势头 (D11): momentum bonus
+        if home_last_win and not home_last_loss: home_score += 2
+        if away_last_win and not away_last_loss: away_score += 2
+        if home_last_loss and not home_last_win: home_score -= 1
+        if away_last_loss and not away_last_win: away_score -= 1
+
+        # --- 根据综合评分差调整预测 ---
+        score_diff = home_score - away_score
+        old_score = m.get('score', '')
+        old_level = m.get('level', '')
+        old_total = m.get('totalGoals', '')
+
+        if abs(score_diff) >= 10:  # 显著差距 → 强化预测
+            if tip == '胜' and score_diff > 0:
+                m['score'] = '2:0/3:1'; m['totalGoals'] = '2球/3球'
+                m['htft'] = '胜-胜/平-胜'
+                new_level = '🟢铁胆' if abs(score_diff) >= 15 else '🟡稳胆'
+                if '铁胆' not in old_level: m['level'] = new_level
+                dim_adjusted += 1
+            elif tip == '负' and score_diff < 0:
+                m['score'] = '0:2/1:3'; m['totalGoals'] = '2球/3球'
+                m['htft'] = '负-负/平-负'
+                new_level = '🟢铁胆' if abs(score_diff) >= 15 else '🟡稳胆'
+                if '铁胆' not in old_level: m['level'] = new_level
+                dim_adjusted += 1
+            elif tip == '平':
+                # 如果比分差大但tip=平(双方实力接近但各有优势) → 倾向有势头的一方
+                if score_diff > 5:
+                    m['score'] = '1:0/1:1'; m['htft'] = '胜-胜/平-胜'
+                    dim_adjusted += 1
+                elif score_diff < -5:
+                    m['score'] = '0:1/1:1'; m['htft'] = '负-负/平-负'
+                    dim_adjusted += 1
+
+        elif abs(score_diff) >= 5:  # 中等差距 → 微调
+            if tip == '胜' and score_diff > 0:
+                m['score'] = '1:0/2:0'; m['totalGoals'] = '1球/2球'
+                dim_adjusted += 1
+            elif tip == '负' and score_diff < 0:
+                m['score'] = '0:1/0:2'; m['totalGoals'] = '1球/2球'
+                dim_adjusted += 1
+
+    if dim_adjusted:
+        log(f"维度感知调整: {dim_adjusted}场 (D1-D8+D11综合评分)")
 
     DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
     if filled: log(f"维度填充: {filled}场")
