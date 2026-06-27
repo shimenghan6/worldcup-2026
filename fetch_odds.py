@@ -230,6 +230,24 @@ def fetch_results():
     if needs_verify:
         log(f"Layer3待验证(有赛果无复盘): {len(needs_verify)}场 ids={needs_verify[:5]}...")
 
+    # Layer 4: 终检 — result必须与postMatch一致(postMatch已标准化为主队在前)
+    # 永久防护: 如果result和postMatch的比分反了,自动修正(不再依赖手动发现)
+    fixed_reversed = 0
+    for match in d['matches']:
+        r = match.get('result', ''); pm = match.get('postMatch', '')
+        if not r or not pm: continue
+        scores = re.findall(r'(\d+)[-:](\d+)', pm)
+        if not scores: continue
+        pm_score = f'{scores[0][0]}:{scores[0][1]}'
+        if r != pm_score:
+            old = r
+            match['result'] = pm_score
+            fixed_reversed += 1
+            log(f"Layer4自动修正: id={match['id']} {old}→{pm_score}")
+
+    if fixed_reversed:
+        updated += fixed_reversed
+
     if updated:
         DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
         log(f"赛果更新: {updated}场 待验证:{len(needs_verify)}场")
