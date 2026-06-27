@@ -123,6 +123,14 @@ def fetch_results():
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
 
+    # Gate 0: 从index.html加载赛程日期(权威来源, 不依赖API的date字段)
+    schedule_dates = {}
+    html = (REPO / "index.html").read_text(encoding='utf-8')
+    for m in re.finditer(r"\{ id:(\d+).*?date:'([^']+)'", html):
+        schedule_dates[int(m.group(1))] = m.group(2)
+    from datetime import date as dt_date
+    today = dt_date.today()
+
     # Layer 1: 竞彩live API (实时窗口~48小时)
     # 自动从data.json构建完整72场映射(不再硬编码遗漏R3比赛!)
     team_to_id = {}
@@ -148,13 +156,21 @@ def fetch_results():
             result = m.get('sectionsNo999', ''); ht = m.get('sectionsNo1', '')
             match = d['matches'][mid - 1]
 
-            # Gate 1: 日期验证 — 比赛必须已过 (API可能返回未来比赛标记为完成)
+            # Gate 0: 赛程日期校验(权威来源: index.html, 不依赖API返回的日期)
+            sched_date = schedule_dates.get(mid, '')
+            if sched_date:
+                try:
+                    if dt_date.fromisoformat(sched_date) > today:
+                        log(f"Gate0跳过: id={mid} 赛程{sched_date}未到, 拒绝写入")
+                        continue
+                except: pass
+
+            # Gate 1: API日期验证 — 比赛必须已过 (双重保险)
             match_date_str = m.get('matchDate', '')  # e.g. '2026-06-27'
             if match_date_str:
-                from datetime import date as dt_date
                 try:
                     match_date = dt_date.fromisoformat(match_date_str)
-                    if match_date > dt_date.today():
+                    if match_date > today:
                         log(f"Gate1跳过: id={mid} 比赛日期{match_date_str}未到, API状态异常")
                         continue
                 except: pass
@@ -338,6 +354,45 @@ def in_betting_hours():
     close_hour = 23 if wd >= 5 else 22  # 周末23点, 工作日22点
     return 11 <= h < close_hour
 
+def scrub_future_results():
+    """终极安全网: 扫描所有比赛, 移除未来日期的result/postMatch/ht_result.
+    防止任何人(API/AI/手动)误写入未赛比赛的假数据."""
+    if not DATA.exists(): return 0
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    html = (REPO / "index.html").read_text(encoding='utf-8')
+    schedule_dates = {}
+    for m in re.finditer(r"\{ id:(\d+).*?date:'([^']+)'", html):
+        schedule_dates[int(m.group(1))] = m.group(2)
+    from datetime import date as dt_date
+    today = dt_date.today()
+
+    scrubbed = 0
+    for match in d['matches']:
+        mid = match['id']
+        sched = schedule_dates.get(mid, '')
+        if not sched: continue
+        try:
+            if dt_date.fromisoformat(sched) > today:
+                dirty = False
+                if match.get('result'):
+                    log(f"SCRUB: id={mid} {match.get('home','?')}vs{match.get('away','?')} 未来{sched} 移除假result={match['result']}")
+                    del match['result']
+                    dirty = True
+                if match.get('postMatch'):
+                    log(f"SCRUB: id={mid} 移除假postMatch")
+                    del match['postMatch']
+                    dirty = True
+                if match.get('ht_result'):
+                    del match['ht_result']
+                    dirty = True
+                if dirty: scrubbed += 1
+        except: pass
+
+    if scrubbed:
+        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        log(f"安全网: 清除了{scrubbed}场未来比赛的假数据")
+    return scrubbed
+
 def main():
     log("=== 世界杯赔率抓取 ===")
     if DRY: log("DRY-RUN模式")
@@ -357,6 +412,8 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
+        # 终极安全网: 清除未来比赛的假数据(任何来源)
+        scrub_future_results()
         # 每次运行轻量检查,维度不足时自动填充
         try:
             import fill_dimensions
