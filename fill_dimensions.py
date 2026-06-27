@@ -3,9 +3,11 @@
 每天运行一次(建议8:00和20:00),自动从已有数据推算11维度
 无需AI搜索,纯数据驱动
 """
-import json, re
+import json, re, sys, io
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 REPO = Path(__file__).parent
 DATA = REPO / "data.json"
@@ -13,6 +15,28 @@ HTML = REPO / "index.html"
 TZ = timezone(timedelta(hours=8))
 
 def log(msg): print(f"[{datetime.now(TZ).strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def migrate_source():
+    """一次性source迁移: 根据injury内容为所有104场比赛添加source字段"""
+    if not DATA.exists():
+        log("data.json不存在")
+        return
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    famous_players = ['梅西','C罗','姆巴佩','哈兰德','孙兴慜','维尼修斯','凯恩','贝林厄姆',
+                      '萨拉赫','德布劳内','内马尔','登贝莱','亚马尔','罗德里','范戴克',
+                      '莫德里奇','格瓦迪奥尔','绍切克','阿什拉夫','布努','戴维斯','大卫',
+                      '凯塞多','厄德高','久保','哲科','普利西奇','巴洛贡','麦金']
+    ai_count = 0; tp_count = 0
+    for m in d['matches']:
+        inj = m.get('injury', '')
+        if any(p in inj for p in famous_players) and len(inj) > 50:
+            m['source'] = 'ai'
+            ai_count += 1
+        else:
+            m['source'] = 'template'
+            tp_count += 1
+    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    log(f"source迁移完成: AI={ai_count} Template={tp_count} Total={ai_count+tp_count}")
 
 def load_rank():
     """从index.html提取FIFA排名"""
@@ -56,6 +80,44 @@ def get_player_tags(tip, is_favorite):
         tags.append('🅓防守核心')
     return ';'.join(tags)
 
+def get_team_performance(matches, team_name):
+    """从已有赛果推算球队近期状态(D5)和上轮表现(D11), 零web搜索"""
+    completed = [m for m in matches
+                 if m.get('result') and m.get('id', 999) <= 72
+                 and (m.get('home') == team_name or m.get('away') == team_name)]
+
+    if not completed:
+        return '首战', '首战'
+
+    games = []
+    for m in completed:
+        is_home = m.get('home') == team_name
+        parts = m['result'].split(':')
+        try: hs, aws = int(parts[0]), int(parts[1])
+        except: continue
+        gf, ga = (hs, aws) if is_home else (aws, hs)
+        opponent = m.get('away') if is_home else m.get('home')
+        games.append({'gf': gf, 'ga': ga, 'opponent': opponent, 'result': m['result']})
+
+    recent = games[-5:]  # 最近5场
+    wins = sum(1 for g in recent if g['gf'] > g['ga'])
+    draws = sum(1 for g in recent if g['gf'] == g['ga'])
+    losses = sum(1 for g in recent if g['gf'] < g['ga'])
+    total_gf = sum(g['gf'] for g in recent)
+    total_ga = sum(g['ga'] for g in recent)
+
+    n = len(recent)
+    form = f'近{n}场{wins}胜{draws}平{losses}负(进{total_gf}失{total_ga})'
+
+    # D11: 上一场比赛
+    last = games[-1]
+    if last['gf'] > last['ga']: outcome = '胜'
+    elif last['gf'] == last['ga']: outcome = '平'
+    else: outcome = '负'
+    last_str = f'上轮{last["result"]}{outcome}{last["opponent"]}'
+
+    return form, last_str
+
 def fill_dimensions():
     """主函数: 自动填充所有缺失维度"""
     if not DATA.exists():
@@ -83,30 +145,11 @@ def fill_dimensions():
         away = m.get('away', '?')
         inj = m.get('injury', '')
 
-        # 模板 vs 真实判断:
-        # 真实: 包含著名球员名(web搜索到的具体情报)
-        # 模板: 只有泛化标签(队长/组织核心/✅核心可出战等),无具体球员名
-        famous_players = ['梅西','C罗','姆巴佩','哈兰德','孙兴慜','维尼修斯','凯恩','贝林厄姆',
-                          '萨拉赫','德布劳内','内马尔','登贝莱','亚马尔','罗德里','范戴克',
-                          '莫德里奇','格瓦迪奥尔','绍切克','阿什拉夫','布努','戴维斯','大卫',
-                          '凯塞多','厄德高','久保','哲科','普利西奇','巴洛贡','麦金']
-        has_real = any(p in inj for p in famous_players) and len(inj) > 50
-
-        # 8维完整性检查
-        has_all = all([
-            bool(re.search(r'[❌✅⚠️]', inj)),  # D1
-            bool(re.search(r'\d-\d-\d', inj)),   # D2
-            '🔥' in inj,                          # D3
-            '🌍' in inj,                          # D4
-            bool(re.search(r'近\d场|首战|上轮', inj)), # D5
-            'H2H' in inj,                         # D6
-            bool(re.search(r'#\d+', inj)),        # D7
-            bool(re.search(r'[🅕🅜🅓🅖]', inj)), # D8
-        ])
-        # 有真实情报+8维完整 → 跳过不碰(保护web搜索成果)
-        if has_all and has_real:
+        # 字段所有权铁律: source='ai'的数据永不被模板覆盖
+        # AI搜索写过真实球员名 → 永远不碰,即使缺某些维度
+        if m.get('source') == 'ai':
             continue
-        # 只有模板数据 → 允许fill_dimensions补充(模板比空着强)
+        # source=template或无source → 允许fill_dimensions填充/升级模板
 
         # 获取排名
         home_rank = ranks.get(home, 50)
@@ -122,18 +165,13 @@ def fill_dimensions():
         tip = m.get('tip', '胜')
         is_home_fav = (tip == '胜')
 
-        # 查找上轮结果
-        prev_home = None; prev_away = None
-        for pm in d['matches']:
-            if pm.get('result') and pm.get('id') != mid:
-                if pm.get('home') == home or pm.get('away') == home:
-                    prev_home = f"上轮{pm['result']}" if pm.get('home') == home else f"上轮{pm['result']}"
-                if pm.get('home') == away or pm.get('away') == away:
-                    prev_away = f"上轮{pm['result']}" if pm.get('home') == away else f"上轮{pm['result']}"
+        # D5/D11: 从已有赛果推算近期状态和上轮表现(零web搜索)
+        home_d5, home_d11 = get_team_performance(d['matches'], home)
+        away_d5, away_d11 = get_team_performance(d['matches'], away)
 
         # 生成阵型
-        home_form = get_formation(tip, True, home_rank)
-        away_form = get_formation(tip, False, away_rank)
+        home_formation = get_formation(tip, True, home_rank)
+        away_formation = get_formation(tip, False, away_rank)
 
         # 生成球员标签
         home_players = get_player_tags(tip, is_home_fav)
@@ -142,18 +180,19 @@ def fill_dimensions():
         # 生成H2H
         h2h = 'H2H:首次交手' if rnd == 1 else 'H2H:待确认'
 
-        # 构建完整的injury字段
+        # 构建完整的injury字段(D5=近期状态, D11=上轮表现)
         new_inj = (
-            f"【{home}#{home_rank}】{home_form};{home_players} "
-            f"| 【{away}#{away_rank}】{away_form};{away_players} "
+            f"【{home}#{home_rank}】{home_formation};{home_players};{home_d5} "
+            f"| 【{away}#{away_rank}】{away_formation};{away_players};{away_d5} "
             f"| 🌍{venue} "
             f"| 🔥出线关键战 "
             f"| {h2h} "
-            f"| {prev_home or '首战'} "
-            f"| {prev_away or '首战'}"
+            f"| {home_d11} "
+            f"| {away_d11}"
         )
 
         m['injury'] = new_inj
+        m['source'] = 'template'  # 标记为模板生成,区分AI数据
         filled += 1
 
     # === 自动填充预测字段(tip/score/htft/goals/level) ===
@@ -259,11 +298,46 @@ def fill_dimensions():
     else:
         log(f"🔴 自测失败: 维度不全!")
 
-    real_fresh = sum(1 for m in upcoming2 if sum(1 for x in ["队长","组织核心","防守核心"] if x in m.get("injury","")) < 3)
-    log(f"真实情报: {real_fresh}/{total}")
+    # Source统计
+    ai_count = sum(1 for m in upcoming2 if m.get('source') == 'ai')
+    template_count = sum(1 for m in upcoming2 if m.get('source') == 'template')
+    log(f"Source: AI={ai_count} Template={template_count}")
+
+    # 检测AI数据是否被意外覆盖(source=template但内容像AI)
+    famous_players = ['梅西','C罗','姆巴佩','哈兰德','孙兴慜','维尼修斯','凯恩','贝林厄姆',
+                      '萨拉赫','德布劳内','内马尔','登贝莱','亚马尔','罗德里','范戴克',
+                      '莫德里奇','格瓦迪奥尔','绍切克','阿什拉夫','布努','戴维斯','大卫',
+                      '凯塞多','厄德高','久保','哲科','普利西奇','巴洛贡','麦金']
+    for m in upcoming2:
+        if m.get('source') == 'template':
+            inj = m.get('injury', '')
+            if any(p in inj for p in famous_players) and len(inj) > 50:
+                log(f"  ⚠️ id={m['id']}: 内容像AI但source=template — 可能被覆盖!")
+                all_pass = False
+
+    # 失败告警文件
+    if not all_pass:
+        alert = REPO / '.fill_failure'
+        alert.write_text(f"{datetime.now(TZ).isoformat()}: 维度不全", encoding='utf-8')
+    elif (REPO / '.fill_failure').exists():
+        (REPO / '.fill_failure').unlink()
+
     return all_pass
 
 if __name__ == '__main__':
-    log("=== 每日维度填充 ===")
-    ok = fill_dimensions()
-    log(f"结果: {'PASS' if ok else 'FAIL'}")
+    import sys
+    if '--migrate-source' in sys.argv:
+        log("=== Source迁移 ===")
+        migrate_source()
+    elif '--verify-only' in sys.argv:
+        log("=== 验证模式 ===")
+        d = json.loads(DATA.read_text(encoding='utf-8'))
+        upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 104]
+        log(f"待赛: {len(upcoming)}场")
+        ai_count = sum(1 for m in d['matches'] if m.get('source') == 'ai')
+        tp_count = sum(1 for m in d['matches'] if m.get('source') == 'template')
+        log(f"Source: AI={ai_count} Template={tp_count}")
+    else:
+        log("=== 每日维度填充 ===")
+        ok = fill_dimensions()
+        log(f"结果: {'PASS' if ok else 'FAIL'}")

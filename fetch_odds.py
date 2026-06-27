@@ -319,6 +319,12 @@ def upload_github():
     if sha: body['sha'] = sha
 
     r = requests.put(GITHUB_API, headers=auth, json=body, timeout=15)
+    if r.status_code == 409:  # SHA冲突: 远程被其他写入者更新了, 重试一次
+        r2 = requests.get(GITHUB_API, headers=auth, timeout=10)
+        new_sha = r2.json().get('sha', '')
+        if new_sha:
+            body['sha'] = new_sha
+            r = requests.put(GITHUB_API, headers=auth, json=body, timeout=15)
     if r.ok:
         log("✅ 已上传GitHub")
     else:

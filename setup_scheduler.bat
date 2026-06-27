@@ -30,6 +30,8 @@ echo [2/3] 创建定时任务...
 schtasks /delete /tn WorldCupOddsFetch /f 2>nul
 schtasks /delete /tn WorldCupOddsFetch_Boot /f 2>nul
 schtasks /delete /tn WorldCupOddsFetch_Hourly /f 2>nul
+schtasks /delete /tn WorldCupAI_Morning /f 2>nul
+schtasks /delete /tn WorldCupAI_Evening /f 2>nul
 
 :: 开机自启(需要管理员)
 schtasks /create /tn WorldCupOddsFetch_Boot /tr "%USERPROFILE%\github-repos\worldcup-2026\run_fetch.bat" /sc onstart /rl HIGHEST /f 2>nul
@@ -46,6 +48,22 @@ if errorlevel 1 (
 ) else (
     echo [OK] 每小时: 自动抓取赔率
 )
+
+:: 每日AI刷新 - 早上8:03 (数据+trigger文件)
+schtasks /create /tn WorldCupAI_Morning /tr "%USERPROFILE%\github-repos\worldcup-2026\ai_refresh.bat" /sc daily /st 08:03 /f 2>nul
+if errorlevel 1 (
+    echo [WARN] AI早间刷新创建失败
+) else (
+    echo [OK] AI早间刷新: 每日08:03
+)
+
+:: 每日AI刷新 - 晚上20:07 (数据+trigger文件)
+schtasks /create /tn WorldCupAI_Evening /tr "%USERPROFILE%\github-repos\worldcup-2026\ai_refresh.bat" /sc daily /st 20:07 /f 2>nul
+if errorlevel 1 (
+    echo [WARN] AI晚间刷新创建失败
+) else (
+    echo [OK] AI晚间刷新: 每日20:07
+)
 echo.
 
 echo [3/3] 试跑一次...
@@ -57,6 +75,8 @@ echo  安装完成!
 echo ============================================
 echo   开机自启: WorldCupOddsFetch_Boot
 echo   每小时:   WorldCupOddsFetch_Hourly
+echo   AI早间:   WorldCupAI_Morning (08:03)
+echo   AI晚间:   WorldCupAI_Evening (20:07)
 echo.
 echo   关机开机 → 开机自动跑
 echo   睡眠唤醒 → 下一个整点自动补跑
