@@ -198,9 +198,12 @@ def fill_dimensions():
         filled += 1
 
     # === 自动填充预测字段(tip/score/htft/goals/level) ===
-    # 任何待赛比赛中预测字段为空/待定的，都自动推算
+    # 🔒 source='ai'的预测由lottery-analyzer skill负责, fill_dimensions不碰
+    # source='template'的预测由fill_dimensions生成机械基线
     pred_filled = 0
     for m in upcoming:
+        if m.get('source') == 'ai':
+            continue  # AI预测由skill负责
         home = m.get('home', '?'); away = m.get('away', '?')
         home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
 
@@ -240,8 +243,11 @@ def fill_dimensions():
         pred_filled += 1
 
     # === 维度感知预测调整: 解析injury中全部11维度, 智能微调预测 ===
+    # 🔒 source='ai'的预测由lottery-analyzer skill负责, 此循环只调template
     dim_adjusted = 0
     for m in upcoming:
+        if m.get('source') == 'ai':
+            continue  # AI预测由skill负责, 不碰
         inj = m.get('injury', '')
         if not inj or '|' not in inj: continue
         sections = [s.strip() for s in inj.split('|')]
@@ -260,9 +266,16 @@ def fill_dimensions():
         home_def, home_mid, home_fwd = (int(x) for x in home_formation.group(1).split('-')) if home_formation else (4,4,2)
         away_def, away_mid, away_fwd = (int(x) for x in away_formation.group(1).split('-')) if away_formation else (4,4,2)
 
-        # --- 解析D1伤病: count ✅ (healthy) vs generic tags ---
-        home_healthy = len(re.findall(r'✅', home_sec))
-        away_healthy = len(re.findall(r'✅', away_sec))
+        # --- 解析D1伤病: count ❌/⚠️ (injured/doubtful) vs ✅ (healthy) ---
+        # 模板用✅标记健康, AI数据用真实球员名。统计缺阵数(❌)和存疑数(⚠️)
+        home_out = len(re.findall(r'❌', home_sec))
+        home_doubt = len(re.findall(r'⚠️', home_sec))
+        away_out = len(re.findall(r'❌', away_sec))
+        away_doubt = len(re.findall(r'⚠️', away_sec))
+        # 也统计✅数量(AI数据可能用✅表示确认可出战)
+        home_ok = len(re.findall(r'✅', home_sec))
+        away_ok = len(re.findall(r'✅', away_sec))
+        # 如果没有任何标记(AI真实数据) → 默认全勤, 无惩罚
 
         # --- 解析D5近期状态 ---
         home_form_match = re.search(r'近(\d+)场(\d+)胜(\d+)平(\d+)负(?:\(进(\d+)失(\d+)\))?', home_sec)
@@ -312,9 +325,9 @@ def fill_dimensions():
             away_score += away_form[1] * 3 + away_form[2] * 1
             away_score += (away_form[4] - away_form[5]) * 0.5
 
-        # 伤病 (D1): full squad bonus
-        home_score += home_healthy * 2
-        away_score += away_healthy * 2
+        # 伤病 (D1): full squad bonus (无❌=+2, 有❌=惩罚)
+        home_score += 2 if home_out == 0 else -home_out
+        away_score += 2 if away_out == 0 else -away_out
 
         # 阵型 (D2): attacking bonus
         if home_fwd >= 3: home_score += 1  # 3 forwards = attacking
@@ -351,19 +364,35 @@ def fill_dimensions():
         score_diff = home_score - away_score
         tip = m.get('tip', '胜')
 
-        # 基于D5状态推算预期进球
+        # 基于D5状态推算预期进球 (70%自身攻击力 + 30%对手防守力, 更敏感)
         home_avg_gf = home_form[4]/max(1,home_form[0]) if home_form else 1.0
         away_avg_gf = away_form[4]/max(1,away_form[0]) if away_form else 1.0
         home_avg_ga = home_form[5]/max(1,home_form[0]) if home_form else 1.0
         away_avg_ga = away_form[5]/max(1,away_form[0]) if away_form else 1.0
 
-        # 伤病调整: 每缺一个核心球员减0.3球
-        home_injury_penalty = 0 if home_healthy >= 3 else (3-home_healthy)*0.3
-        away_injury_penalty = 0 if away_healthy >= 3 else (3-away_healthy)*0.3
+        # 伤病调整: 每个❌缺阵-0.5球, 每个⚠️存疑-0.2球
+        # 如果有✅标记(模板), 至少3个✅=无惩罚
+        has_template_home = home_ok >= 2
+        has_template_away = away_ok >= 2
+        if has_template_home: home_out = max(0, 3 - home_ok)  # 模板: 缺几个✅
+        if has_template_away: away_out = max(0, 3 - away_ok)
+        home_injury_penalty = home_out*0.5 + home_doubt*0.2
+        away_injury_penalty = away_out*0.5 + away_doubt*0.2
 
-        # 预期主队进球 = 主队攻击力 vs 客队防守力
-        exp_home_gf = round((home_avg_gf + away_avg_ga)/2 - home_injury_penalty)
-        exp_away_gf = round((away_avg_gf + home_avg_ga)/2 - away_injury_penalty)
+        # 预期进球 = 70%自身攻击 + 30%对手防守 (非50-50, 更强调进攻能力)
+        raw_home = 0.7*home_avg_gf + 0.3*away_avg_ga - home_injury_penalty
+        raw_away = 0.7*away_avg_gf + 0.3*home_avg_ga - away_injury_penalty
+
+        # 统治力加成: GF/GA比率>2.5的球队 +1球 (如巴西进8失2=4倍)
+        if home_form and home_form[4] > home_form[5]*2.5: raw_home += 0.5
+        if away_form and away_form[4] > away_form[5]*2.5: raw_away += 0.5
+
+        # 火热状态加成: 全胜球队 +0.5球
+        if home_form and home_form[1] == home_form[0] and home_form[0] >= 2: raw_home += 0.5
+        if away_form and away_form[1] == away_form[0] and away_form[0] >= 2: raw_away += 0.5
+
+        exp_home_gf = raw_home
+        exp_away_gf = raw_away
 
         # 阵型调整
         if home_fwd >= 3: exp_home_gf += 0.5
@@ -376,6 +405,11 @@ def fill_dimensions():
         if home_last_loss: exp_home_gf -= 0.3
         if away_last_win: exp_away_gf += 0.3
         if away_last_loss: exp_away_gf -= 0.3
+
+        # 淘汰赛保守系数: 淘汰赛进球通常低于小组赛 (id>=73)
+        if m.get('id', 0) >= 73:
+            exp_home_gf *= 0.85
+            exp_away_gf *= 0.85
 
         exp_home_gf = max(0, round(exp_home_gf))
         exp_away_gf = max(0, round(exp_away_gf))
