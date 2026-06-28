@@ -213,14 +213,15 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   .result-score { font-size:1.1em; }
 }
 
-.bracket-tree { display:flex; gap:8px; overflow-x:auto; padding:16px 0; }
-.bracket-col { display:flex; flex-direction:column; gap:6px; min-width:180px; }
-.bracket-col h4 { color:var(--accent); font-size:0.85em; text-align:center; margin-bottom:4px; }
-.bracket-match { background:var(--card); border-radius:8px; padding:8px 12px; border:1px solid var(--border); text-align:center; font-size:0.82em; }
-.bracket-match .teams { font-weight:600; }
+.bracket-tree { display:flex; gap:0; overflow-x:auto; padding:12px 4px; align-items:stretch; }
+.bracket-col { display:flex; flex-direction:column; justify-content:space-around; min-width:155px; max-width:170px; position:relative; }
+.bracket-col h4 { color:var(--accent); font-size:0.75em; text-align:center; margin:0 0 6px 0; padding-bottom:4px; border-bottom:2px solid var(--accent); }
+.bracket-match { background:var(--card); border-radius:6px; padding:5px 8px; margin:4px 8px; border:1px solid var(--border); text-align:center; font-size:0.7em; position:relative; }
+.bracket-match .teams { font-weight:600; line-height:1.3; }
 .bracket-match .teams .winner { color:var(--accent); }
-.bracket-match .vs { color:var(--muted); font-size:0.8em; }
-.bracket-match .pred { font-size:0.7em; color:var(--gold); margin-top:2px; }
+.bracket-match .vs { color:var(--muted); font-size:0.75em; }
+.bracket-match .pred { font-size:0.7em; color:var(--gold); margin-top:1px; }
+.bracket-match.won { border-color:var(--accent); box-shadow:0 0 6px rgba(0,200,100,0.15); }
 </style>
 </head>
 <body>
@@ -929,63 +930,85 @@ function renderBracket() {
     const m = {阿根廷:'🇦🇷',巴西:'🇧🇷',法国:'🇫🇷',德国:'🇩🇪',西班牙:'🇪🇸',英格兰:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
       葡萄牙:'🇵🇹',荷兰:'🇳🇱',克罗地亚:'🇭🇷',墨西哥:'🇲🇽',美国:'🇺🇸',哥伦比亚:'🇨🇴',
       日本:'🇯🇵',摩洛哥:'🇲🇦',挪威:'🇳🇴',瑞典:'🇸🇪',加拿大:'🇨🇦',南非:'🇿🇦',
-      巴拉圭:'🇵🇾',科特迪瓦:'🇨🇮',苏格兰:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',波黑:'🇧🇦',埃及:'🇪🇬',
+      巴拉圭:'🇵🇾',科特迪瓦:'🇨🇮',苏格兰:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',波黑:'🇧🇦',埃及:'🇪🇬',比利时:'🇧🇪',
       奥地利:'🇦🇹',佛得角:'🇨🇻',加纳:'🇬🇭',民主刚果:'🇨🇩',厄瓜多尔:'🇪🇨',
       乌拉圭:'🇺🇾',澳大利亚:'🇦🇺',瑞士:'🇨🇭',阿尔及利亚:'🇩🇿',待定:'❓'};
     return m[t]||'';
   };
-  const short = (t) => t.length > 6 ? t.substring(0,5)+'..' : t;
 
-  if (allKO.length === 0) return '<h3>🏆 世界杯淘汰赛对阵图</h3><p>数据加载中...</p>';
+  if (allKO.length === 0) return '<h3>🏆 世界杯淘汰赛对阵图</h3><p style="color:var(--muted)">数据加载中...</p>';
 
+  // Tournament tree: R32(16) → R16(8) → QF(4) → SF(2) → Final(1) + 3rd(1)
   const rounds = [
-    {title:'32强赛 (6/29-7/4)', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
-    {title:'16强赛 (7/5-7/8)', ids:[89,90,91,92,93,94,95,96]},
-    {title:'1/4决赛 (7/10-12)', ids:[97,98,99,100]},
-    {title:'半决赛 (7/15-16)', ids:[101,102]},
-    {title:'季军赛 (7/19)', ids:[103]},
-    {title:'🏆 决赛 (7/20)', ids:[104]}
+    {title:'32强', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88], size:'small'},
+    {title:'16强', ids:[89,90,91,92,93,94,95,96], size:'small'},
+    {title:'1/4决赛', ids:[97,98,99,100], size:'small'},
+    {title:'半决赛', ids:[101,102], size:'small'},
+    {title:'季军赛', ids:[103], size:'small'},
+    {title:'🏆决赛', ids:[104], size:'large'},
   ];
 
-  let html = '<h3>🏆 世界杯淘汰赛对阵图</h3><div class="bracket-tree">';
+  let html = '<h3>🏆 世界杯淘汰赛对阵图</h3>';
+  html += '<div class="bracket-tree" style="font-size:0.68em">';
 
   for (const round of rounds) {
     const matches = allKO.filter(m => round.ids.includes(m.id));
     if (matches.length === 0) continue;
-    html += '<div class="bracket-col">';
-    html += '<h4>' + round.title + '</h4>';
-    for (const m of matches) {
-      const h = m.home || '待定', a = m.away || '待定';
-      const result = m.result || '';
-      const tip = m.tip || '?';
-      const score = m.score || '';
+    const isLarge = round.size === 'large';
 
-      html += '<div class="bracket-match" style="font-size:0.72em">';
-      if (result) {
-        const [hs, as] = result.split(':');
-        html += '<div class="teams">' + flag(h)+' ' + short(h) + ' <b style="color:var(--accent)">' + (hs||'?') + '</b></div>';
-        html += '<div class="teams">' + flag(a)+' ' + short(a) + ' <b style="color:var(--accent)">' + (as||'?') + '</b></div>';
-        html += '<div class="pred" style="color:var(--accent)">✅ ' + result + '</div>';
-      } else {
-        html += '<div class="teams">' + flag(h)+' <b>' + short(h) + '</b></div>';
-        html += '<div class="vs">VS</div>';
-        html += '<div class="teams">' + flag(a)+' ' + short(a) + '</div>';
-        if (h.includes('胜者') || h.includes('负者')) {
-          html += '<div class="pred" style="color:var(--muted)">待定</div>';
-        } else {
-          html += '<div class="pred">' + tip + ' ' + score + '</div>';
+    html += '<div class="bracket-col" style="' + (isLarge ? 'min-width:180px;' : '') + '">';
+    html += '<h4>' + round.title + '</h4>';
+
+    // For R32, pair matches (2 per pair that feed into same R16)
+    if (round.title === '32强') {
+      for (let i = 0; i < matches.length; i += 2) {
+        html += '<div style="margin:2px 0">';
+        for (let j = 0; j < 2 && (i+j) < matches.length; j++) {
+          const m = matches[i+j];
+          html += renderMatchCard(m, flag);
         }
+        html += '</div>';
       }
-      html += '</div>';
+    } else {
+      for (const m of matches) {
+        html += renderMatchCard(m, flag);
+      }
     }
     html += '</div>';
   }
   html += '</div>';
 
   const played = allKO.filter(m => m.result).length;
-  html += '<p style="color:var(--muted);font-size:0.7em;text-align:center;margin-top:8px">'
-    + '已赛:' + played + '/32 | 数据来源:data.json实时更新 | 赛果+赔率+预测同步</p>';
+  html += '<p style="color:var(--muted);font-size:0.68em;text-align:center;margin:8px 0">'
+    + '已赛:' + played + '/32 | data.json实时更新 | 刷新页面获取最新赛果</p>';
   return html;
+}
+
+function renderMatchCard(m, flag) {
+  const h = m.home || '待定', a = m.away || '待定';
+  const result = m.result || '';
+  const tip = m.tip || '?', score = m.score || '';
+  const isPlaceholder = h.includes('胜者') || h.includes('负者') || h === '待定' || a === '待定';
+  const won = !!result;
+
+  let card = '<div class="bracket-match' + (won ? ' won' : '') + '">';
+  if (won) {
+    const parts = result.split(':');
+    card += '<div class="teams">' + flag(h)+' ' + h + ' <b style="color:var(--accent)">' + parts[0] + '</b></div>';
+    card += '<div class="teams">' + flag(a)+' ' + a + ' <b style="color:var(--accent)">' + parts[1] + '</b></div>';
+    card += '<div class="pred" style="color:var(--accent)">✅ ' + result + '</div>';
+  } else if (isPlaceholder) {
+    card += '<div class="teams" style="color:var(--muted)">' + h + '</div>';
+    card += '<div class="vs" style="color:var(--muted)">vs</div>';
+    card += '<div class="teams" style="color:var(--muted)">' + a + '</div>';
+  } else {
+    card += '<div class="teams">' + flag(h)+' <b>' + h + '</b></div>';
+    card += '<div class="vs">VS</div>';
+    card += '<div class="teams">' + flag(a)+' ' + a + '</div>';
+    if (score) card += '<div class="pred">' + tip + ' ' + score + '</div>';
+  }
+  card += '</div>';
+  return card;
 }
 
 function showView(v) {
