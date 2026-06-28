@@ -62,20 +62,31 @@ def update_json(data):
     mc = data.get('matchCount', 0) if data else 0
     wc = data.get('hasWorldCup', False) if data else False
 
-    # 用抓到的赔率更新单场SPF（按竞彩code匹配）
+    # 用抓到的赔率更新单场SPF（按竞彩code匹配，淘汰赛按队名匹配）
     # 🔒 铁律: 已完赛的比赛(有result)不更新SPF — 比赛踢完了赔率无意义
     updated_count = 0
     skipped_finished = 0
     if data and data.get('matches'):
-        fetched = {m['code']: m for m in data['matches'] if m.get('code')}
+        fetched_by_code = {m['code']: m for m in data['matches'] if m.get('code')}
+        # 队名索引: (home, away) -> API match (淘汰赛fallback)
+        fetched_by_name = {}
+        for m in data['matches']:
+            h = m.get('home','').strip(); a = m.get('away','').strip()
+            if h and a: fetched_by_name[(h,a)] = m
         for match in d.get('matches', []):
             code = match.get('code', '')
             # 🔒 跳过已完赛的比赛
             if match.get('result'):
                 skipped_finished += 1
                 continue
-            if code and code in fetched:
-                f = fetched[code]
+            f = None
+            if code and code in fetched_by_code:
+                f = fetched_by_code[code]
+            else:
+                # 淘汰赛fallback: 按队名匹配
+                key = (match.get('home','').strip(), match.get('away','').strip())
+                f = fetched_by_name.get(key)
+            if f:
                 old_spf = match.get('spf', '')
                 new_spf = f"{f['spf_win']}/{f['spf_draw']}/{f['spf_lose']}"
                 if new_spf != old_spf and f['spf_win']:
