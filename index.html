@@ -915,86 +915,62 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
 })();
 
 function renderBracket() {
-  // Use the SAME standings calculation as renderGroups (verified correct)
-  const standings = {};
-  for (const g of Object.keys(GROUPS)) {
-    standings[g] = {};
-    for (const t of GROUPS[g].teams) standings[g][t] = {p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
-  }
-  for (const m of MATCHES) {
-    if (!m.result || !m.group || !standings[m.group]) continue;
-    const [hs, as] = m.result.split(':').map(Number);
-    if (isNaN(hs) || isNaN(as)) continue;
-    const sg = standings[m.group];
-    // Match by team name (handle both exact and partial matches)
-    const findTeam = (name) => {
-      if (sg[name]) return name;
-      for (const t of Object.keys(sg)) {
-        if (name.includes(t) || t.includes(name)) return t;
-      }
-      return null;
-    };
-    const h = findTeam(m.home); const a = findTeam(m.away);
-    if (!h || !a) continue;
-    sg[h].p++; sg[h].gf+=hs; sg[h].ga+=as;
-    sg[a].p++; sg[a].gf+=as; sg[a].ga+=hs;
-    if (hs>as) { sg[h].w++; sg[h].pts+=3; sg[a].l++; }
-    else if (hs===as) { sg[h].d++; sg[h].pts+=1; sg[a].d++; sg[a].pts+=1; }
-    else { sg[a].w++; sg[a].pts+=3; sg[h].l++; }
-  }
-  const sortTeams = (g) => GROUPS[g].teams.slice().sort((a,b) => {
-    const sa=standings[g][a], sb=standings[g][b];
-    if (sb.pts!==sa.pts) return sb.pts-sa.pts;
-    const gdA=sa.gf-sa.ga, gdB=sb.gf-sb.ga;
-    if (gdB!==gdA) return gdB-gdA;
-    return sb.gf-sa.gf;
-  });
+  const r32Matches = (LIVE_DATA && LIVE_DATA.matches)
+    ? LIVE_DATA.matches.filter(m => m.id >= 73 && m.id <= 88).sort((a,b) => a.id-b.id)
+    : [];
 
-  const W={}, R={}, allThirds=[];
-  for (const g of Object.keys(GROUPS)) {
-    const s = sortTeams(g); W[g]=s[0]; R[g]=s[1];
-    if (s.length>=3) allThirds.push({g, team:s[2], ...groups[g][s[2]]});
-  }
-  allThirds.sort((a,b) => b.pts!==a.pts ? b.pts-a.pts : (b.gf-b.ga)!==(a.gf-a.ga) ? (b.gf-b.ga)-(a.gf-a.ga) : b.gf-a.gf);
-  
-  const get3rd = (groups) => {
-    for (const t of allThirds) {
-      if (groups.includes(t.g) && !t.used) { t.used=true; return t.team; }
-    }
-    return '待定';
+  const flag = (t) => {
+    const m = {阿根廷:'🇦🇷',巴西:'🇧🇷',法国:'🇫🇷',德国:'🇩🇪',西班牙:'🇪🇸',英格兰:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      葡萄牙:'🇵🇹',荷兰:'🇳🇱',克罗地亚:'🇭🇷',墨西哥:'🇲🇽',美国:'🇺🇸',哥伦比亚:'🇨🇴',
+      日本:'🇯🇵',摩洛哥:'🇲🇦',挪威:'🇳🇴',瑞典:'🇸🇪',加拿大:'🇨🇦',南非:'🇿🇦',
+      巴拉圭:'🇵🇾',科特迪瓦:'🇨🇮',苏格兰:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',波黑:'🇧🇦',埃及:'🇪🇬',
+      奥地利:'🇦🇹',佛得角:'🇨🇻',加纳:'🇬🇭',民主刚果:'🇨🇩',厄瓜多尔:'🇪🇨',
+      乌拉圭:'🇺🇾',澳大利亚:'🇦🇺',瑞士:'🇨🇭',阿尔及利亚:'🇩🇿',待定:'❓'};
+    return m[t]||'';
   };
 
-  const bracket = [
-    ['R32','A2', 'B2'],['R32','E1', '3AD'],['R32','F1', 'C2'],['R32','C1', 'F2'],
-    ['R32','I1', '3EH'],['R32','E2', 'I2'],['R32','A1', '3CF'],['R32','L1', '3IL'],
-    ['R32','D1', '3BG'],['R32','G1', '3AI'],['R32','K2', 'L2'],['R32','H1', 'J2'],
-    ['R32','B1', '3EH2'],['R32','J1', 'H2'],['R32','K1', '3DJ'],['R32','D2', 'G2'],
-  ];
+  let html = '<h3>🏆 32强对阵图</h3>';
+  if (r32Matches.length === 0) { html += '<p>数据加载中...</p>'; return html; }
 
-  const resolve = (code) => {
-    if (code.length===2 && code[1]==='1') return W[code[0]]||code;
-    if (code.length===2 && code[1]==='2') return R[code[0]]||code;
-    const map={'3AD':'ABCD','3CF':'CDEF','3BG':'BEFG','3EH':'EFGH','3EH2':'EFGH','3IL':'IJKL','3AI':'AEHI','3DJ':'DEIJ'};
-    return get3rd(map[code]||'ABCD');
-  };
-
-  let html = '<h3>🏆 32强对阵图</h3><div class="bracket-tree">';
   const cols = [[0,1],[2,3,4,5],[6,7,8,9],[10,11,12,13],[14,15]];
-  for (const idxs of cols) {
+  const colLabels = ['左路','中路左','中路右','右路','右路末'];
+
+  html += '<div class="bracket-tree">';
+  for (let ci = 0; ci < cols.length; ci++) {
     html += '<div class="bracket-col">';
-    for (const i of idxs) {
-      const [stage, t1, t2] = bracket[i];
-      const team1 = resolve(t1); const team2 = resolve(t2);
+    html += '<h4>' + colLabels[ci] + '</h4>';
+    for (const i of cols[ci]) {
+      if (i >= r32Matches.length) continue;
+      const m = r32Matches[i];
+      const h = m.home || '待定', a = m.away || '待定';
+      const tip = m.tip || '?';
+      const score = m.score || '';
+      const result = m.result || '';
+      const spf = (m.spf && m.spf !== '待定') ? m.spf.split('/')[0] : '';
+      const level = (m.level||'').replace(/[🟢🟡🟠🔵]/g,'');
+
       html += '<div class="bracket-match">';
-      html += '<div class="teams"><span class="winner">' + flag(team1)+' '+team1 + '</span></div>';
-      html += '<div class="vs">VS</div>';
-      html += '<div class="teams">' + flag(team2)+' '+team2 + '</div>';
-      html += '<div class="pred">R32-'+(i+1)+'</div>';
+      if (result) {
+        const [hs, as] = result.split(':');
+        html += '<div class="teams">' + flag(h)+' '+h + ' <span style="color:var(--accent);font-weight:700">' + (hs||'?') + '</span></div>';
+        html += '<div class="teams">' + flag(a)+' '+a + ' <span style="color:var(--accent);font-weight:700">' + (as||'?') + '</span></div>';
+        html += '<div class="pred" style="color:var(--accent)">✅ ' + result + '</div>';
+      } else {
+        html += '<div class="teams">' + flag(h)+' <b>' + h + '</b></div>';
+        html += '<div class="vs">VS</div>';
+        html += '<div class="teams">' + flag(a)+' ' + a + '</div>';
+        html += '<div class="pred">' + (spf ? spf+' | ' : '') + tip + ' ' + score + '</div>';
+        if (level) html += '<div class="pred" style="color:var(--gold)">' + level + '</div>';
+      }
       html += '</div>';
     }
     html += '</div>';
   }
-  html += '</div><p style="color:var(--muted);font-size:0.75em;text-align:center;margin-top:8px">基于当前积分排名生成 | 3rd=最佳小组第三</p>';
+  html += '</div>';
+
+  const played = r32Matches.filter(m => m.result).length;
+  html += '<p style="color:var(--muted);font-size:0.75em;text-align:center;margin-top:8px">'
+    + '已赛:' + played + '/16 | 数据来源:data.json实时更新 | 赔率+预测+赛果同步</p>';
   return html;
 }
 
