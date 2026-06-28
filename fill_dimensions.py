@@ -332,41 +332,77 @@ def fill_dimensions():
         if home_last_loss and not home_last_win: home_score -= 1
         if away_last_loss and not away_last_win: away_score -= 1
 
-        # --- 根据综合评分差调整预测 ---
+        # --- 根据维度数据定制每场预测(非模板, 基于实际数据) ---
         score_diff = home_score - away_score
-        old_score = m.get('score', '')
-        old_level = m.get('level', '')
-        old_total = m.get('totalGoals', '')
+        tip = m.get('tip', '胜')
 
-        if abs(score_diff) >= 10:  # 显著差距 → 强化预测
-            if tip == '胜' and score_diff > 0:
-                m['score'] = '2:0/3:1'; m['totalGoals'] = '2球/3球'
-                m['htft'] = '胜-胜/平-胜'
-                new_level = '🟢铁胆' if abs(score_diff) >= 15 else '🟡稳胆'
-                if '铁胆' not in old_level: m['level'] = new_level
-                dim_adjusted += 1
-            elif tip == '负' and score_diff < 0:
-                m['score'] = '0:2/1:3'; m['totalGoals'] = '2球/3球'
-                m['htft'] = '负-负/平-负'
-                new_level = '🟢铁胆' if abs(score_diff) >= 15 else '🟡稳胆'
-                if '铁胆' not in old_level: m['level'] = new_level
-                dim_adjusted += 1
-            elif tip == '平':
-                # 如果比分差大但tip=平(双方实力接近但各有优势) → 倾向有势头的一方
-                if score_diff > 5:
-                    m['score'] = '1:0/1:1'; m['htft'] = '胜-胜/平-胜'
-                    dim_adjusted += 1
-                elif score_diff < -5:
-                    m['score'] = '0:1/1:1'; m['htft'] = '负-负/平-负'
-                    dim_adjusted += 1
+        # 基于D5状态推算预期进球
+        home_avg_gf = home_form[4]/max(1,home_form[0]) if home_form else 1.0
+        away_avg_gf = away_form[4]/max(1,away_form[0]) if away_form else 1.0
+        home_avg_ga = home_form[5]/max(1,home_form[0]) if home_form else 1.0
+        away_avg_ga = away_form[5]/max(1,away_form[0]) if away_form else 1.0
 
-        elif abs(score_diff) >= 5:  # 中等差距 → 微调
-            if tip == '胜' and score_diff > 0:
-                m['score'] = '1:0/2:0'; m['totalGoals'] = '1球/2球'
-                dim_adjusted += 1
-            elif tip == '负' and score_diff < 0:
-                m['score'] = '0:1/0:2'; m['totalGoals'] = '1球/2球'
-                dim_adjusted += 1
+        # 伤病调整: 每缺一个核心球员减0.3球
+        home_injury_penalty = 0 if home_healthy >= 3 else (3-home_healthy)*0.3
+        away_injury_penalty = 0 if away_healthy >= 3 else (3-away_healthy)*0.3
+
+        # 预期主队进球 = 主队攻击力 vs 客队防守力
+        exp_home_gf = round((home_avg_gf + away_avg_ga)/2 - home_injury_penalty)
+        exp_away_gf = round((away_avg_gf + home_avg_ga)/2 - away_injury_penalty)
+
+        # 阵型调整
+        if home_fwd >= 3: exp_home_gf += 0.5
+        if home_def >= 5: exp_home_gf -= 0.3; exp_away_gf -= 0.3
+        if away_fwd >= 3: exp_away_gf += 0.5
+        if away_def >= 5: exp_away_gf -= 0.3; exp_home_gf -= 0.3
+
+        # 势头调整
+        if home_last_win: exp_home_gf += 0.3
+        if home_last_loss: exp_home_gf -= 0.3
+        if away_last_win: exp_away_gf += 0.3
+        if away_last_loss: exp_away_gf -= 0.3
+
+        exp_home_gf = max(0, round(exp_home_gf))
+        exp_away_gf = max(0, round(exp_away_gf))
+
+        # 根据预期进球生成定制比分(双选不能相同)
+        if tip == '胜':
+            if exp_home_gf <= exp_away_gf:
+                exp_home_gf = exp_away_gf + 1
+            alt_home = max(exp_home_gf-1, 1)
+            alt_away = max(exp_away_gf-1, 0) if exp_away_gf > 0 else 0
+            s1 = f'{exp_home_gf}:{exp_away_gf}'
+            s2 = f'{alt_home}:{alt_away}' if f'{alt_home}:{alt_away}' != s1 else f'{exp_home_gf+1}:{exp_away_gf}'
+            m['score'] = f'{s1}/{s2}'
+            m['htft'] = '胜-胜/平-胜'
+        elif tip == '负':
+            if exp_away_gf <= exp_home_gf:
+                exp_away_gf = exp_home_gf + 1
+            alt_away = max(exp_away_gf-1, 1)
+            alt_home = max(exp_home_gf-1, 0) if exp_home_gf > 0 else 0
+            s1 = f'{exp_home_gf}:{exp_away_gf}'
+            s2 = f'{alt_home}:{alt_away}' if f'{alt_home}:{alt_away}' != s1 else f'{exp_home_gf}:{exp_away_gf+1}'
+            m['score'] = f'{s1}/{s2}'
+            m['htft'] = '负-负/平-负'
+        else:
+            if exp_home_gf != exp_away_gf:
+                exp_home_gf = exp_away_gf = max(exp_home_gf, exp_away_gf)
+            s1 = f'{exp_home_gf}:{exp_away_gf}'
+            s2 = '1:1' if s1 != '1:1' else '0:0'
+            m['score'] = f'{s1}/{s2}'
+            m['htft'] = '平平/平-平'
+
+        total = exp_home_gf + exp_away_gf
+        m['totalGoals'] = f'{total}球/{max(1,total-1)}球' if total > 1 else '1球/2球'
+
+        # Level按综合评分差校准
+        abs_diff = abs(score_diff)
+        if abs_diff >= 15: m['level'] = '🟢铁胆'
+        elif abs_diff >= 8: m['level'] = '🟡稳胆'
+        elif abs_diff >= 4: m['level'] = '🟠大概率'
+        else: m['level'] = '🔵中等'
+
+        dim_adjusted += 1
 
     if dim_adjusted:
         log(f"维度感知调整: {dim_adjusted}场 (D1-D8+D11综合评分)")
