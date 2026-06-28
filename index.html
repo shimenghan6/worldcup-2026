@@ -915,8 +915,8 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
 })();
 
 function renderBracket() {
-  const r32Matches = (LIVE_DATA && LIVE_DATA.matches)
-    ? LIVE_DATA.matches.filter(m => m.id >= 73 && m.id <= 88).sort((a,b) => a.id-b.id)
+  const allKO = (LIVE_DATA && LIVE_DATA.matches)
+    ? LIVE_DATA.matches.filter(m => m.id >= 73 && m.id <= 104).sort((a,b) => a.id-b.id)
     : [];
 
   const flag = (t) => {
@@ -928,39 +928,47 @@ function renderBracket() {
       乌拉圭:'🇺🇾',澳大利亚:'🇦🇺',瑞士:'🇨🇭',阿尔及利亚:'🇩🇿',待定:'❓'};
     return m[t]||'';
   };
+  const short = (t) => t.length > 6 ? t.substring(0,5)+'..' : t;
 
-  let html = '<h3>🏆 32强对阵图</h3>';
-  if (r32Matches.length === 0) { html += '<p>数据加载中...</p>'; return html; }
+  if (allKO.length === 0) return '<h3>🏆 世界杯淘汰赛对阵图</h3><p>数据加载中...</p>';
 
-  const cols = [[0,1],[2,3,4,5],[6,7,8,9],[10,11,12,13],[14,15]];
-  const colLabels = ['左路','中路左','中路右','右路','右路末'];
+  const rounds = [
+    {title:'32强赛 (6/29-7/4)', ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+    {title:'16强赛 (7/5-7/8)', ids:[89,90,91,92,93,94,95,96]},
+    {title:'1/4决赛 (7/10-12)', ids:[97,98,99,100]},
+    {title:'半决赛 (7/15-16)', ids:[101,102]},
+    {title:'季军赛 (7/19)', ids:[103]},
+    {title:'🏆 决赛 (7/20)', ids:[104]}
+  ];
 
-  html += '<div class="bracket-tree">';
-  for (let ci = 0; ci < cols.length; ci++) {
+  let html = '<h3>🏆 世界杯淘汰赛对阵图</h3><div class="bracket-tree">';
+
+  for (const round of rounds) {
+    const matches = allKO.filter(m => round.ids.includes(m.id));
+    if (matches.length === 0) continue;
     html += '<div class="bracket-col">';
-    html += '<h4>' + colLabels[ci] + '</h4>';
-    for (const i of cols[ci]) {
-      if (i >= r32Matches.length) continue;
-      const m = r32Matches[i];
+    html += '<h4>' + round.title + '</h4>';
+    for (const m of matches) {
       const h = m.home || '待定', a = m.away || '待定';
+      const result = m.result || '';
       const tip = m.tip || '?';
       const score = m.score || '';
-      const result = m.result || '';
-      const spf = (m.spf && m.spf !== '待定') ? m.spf.split('/')[0] : '';
-      const level = (m.level||'').replace(/[🟢🟡🟠🔵]/g,'');
 
-      html += '<div class="bracket-match">';
+      html += '<div class="bracket-match" style="font-size:0.72em">';
       if (result) {
         const [hs, as] = result.split(':');
-        html += '<div class="teams">' + flag(h)+' '+h + ' <span style="color:var(--accent);font-weight:700">' + (hs||'?') + '</span></div>';
-        html += '<div class="teams">' + flag(a)+' '+a + ' <span style="color:var(--accent);font-weight:700">' + (as||'?') + '</span></div>';
+        html += '<div class="teams">' + flag(h)+' ' + short(h) + ' <b style="color:var(--accent)">' + (hs||'?') + '</b></div>';
+        html += '<div class="teams">' + flag(a)+' ' + short(a) + ' <b style="color:var(--accent)">' + (as||'?') + '</b></div>';
         html += '<div class="pred" style="color:var(--accent)">✅ ' + result + '</div>';
       } else {
-        html += '<div class="teams">' + flag(h)+' <b>' + h + '</b></div>';
+        html += '<div class="teams">' + flag(h)+' <b>' + short(h) + '</b></div>';
         html += '<div class="vs">VS</div>';
-        html += '<div class="teams">' + flag(a)+' ' + a + '</div>';
-        html += '<div class="pred">' + (spf ? spf+' | ' : '') + tip + ' ' + score + '</div>';
-        if (level) html += '<div class="pred" style="color:var(--gold)">' + level + '</div>';
+        html += '<div class="teams">' + flag(a)+' ' + short(a) + '</div>';
+        if (h.includes('胜者') || h.includes('负者')) {
+          html += '<div class="pred" style="color:var(--muted)">待定</div>';
+        } else {
+          html += '<div class="pred">' + tip + ' ' + score + '</div>';
+        }
       }
       html += '</div>';
     }
@@ -968,9 +976,9 @@ function renderBracket() {
   }
   html += '</div>';
 
-  const played = r32Matches.filter(m => m.result).length;
-  html += '<p style="color:var(--muted);font-size:0.75em;text-align:center;margin-top:8px">'
-    + '已赛:' + played + '/16 | 数据来源:data.json实时更新 | 赔率+预测+赛果同步</p>';
+  const played = allKO.filter(m => m.result).length;
+  html += '<p style="color:var(--muted);font-size:0.7em;text-align:center;margin-top:8px">'
+    + '已赛:' + played + '/32 | 数据来源:data.json实时更新 | 赛果+赔率+预测同步</p>';
   return html;
 }
 
