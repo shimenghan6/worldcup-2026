@@ -332,7 +332,22 @@ def fill_dimensions():
         if home_last_loss and not home_last_win: home_score -= 1
         if away_last_loss and not away_last_win: away_score -= 1
 
-        # --- 根据维度数据定制每场预测(非模板, 基于实际数据) ---
+        # 矛盾/士气 (D3): 🔥段落分析 — 生死战/德比/复仇战等高压因素
+        fire_sec = sections[3] if len(sections) > 3 else ''
+        home_must_win = '必须赢' in fire_sec or '必胜' in fire_sec
+        away_must_win = '必须赢' in fire_sec or '必胜' in fire_sec
+        derby = '德比' in fire_sec or '死敌' in fire_sec or '复仇' in fire_sec
+        if home_must_win: home_score += 1  # 背水一战士气加成
+        if derby: home_score += 1; away_score += 1  # 德比双方都拼命, 总进球↑
+
+        # 外界因素 (D4): 🌍段落 — 高原/主场/天气/旅行
+        venue_sec = sections[2] if len(sections) > 2 else ''
+        home_advantage = ('主场' in venue_sec or 'K' in venue_sec.replace(' ',''))
+        altitude = '海拔' in venue_sec or '高原' in venue_sec or '2240m' in venue_sec or '阿兹特克' in venue_sec
+        if home_advantage: home_score += 2
+        if altitude: home_score += 1  # 高原适应优势
+
+        # --- 根据全部11维度数据定制每场预测(非模板, 基于实际数据) ---
         score_diff = home_score - away_score
         tip = m.get('tip', '胜')
 
