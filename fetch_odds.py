@@ -67,12 +67,26 @@ def update_json(data):
     updated_count = 0
     skipped_finished = 0
     if data and data.get('matches'):
+        # 读取config.json获取队名别名 (单一数据源, 不再硬编码)
+        config = json.loads((REPO / 'config.json').read_text(encoding='utf-8'))
+        ALIAS = config.get('aliases', {})
+        # 双向扩展: a->b 和 b->a 都加入
+        full_alias = dict(ALIAS)
+        for k, v in list(ALIAS.items()):
+            if v not in full_alias: full_alias[v] = k
+
         fetched_by_code = {m['code']: m for m in data['matches'] if m.get('code')}
         # 队名索引: (home, away) -> API match (淘汰赛fallback)
         fetched_by_name = {}
         for m in data['matches']:
             h = m.get('home','').strip(); a = m.get('away','').strip()
-            if h and a: fetched_by_name[(h,a)] = m
+            if h and a:
+                fetched_by_name[(h,a)] = m
+                # 生成所有别名组合
+                for h2 in [h, full_alias.get(h,h)]:
+                    for a2 in [a, full_alias.get(a,a)]:
+                        if h2 != h or a2 != a:
+                            fetched_by_name[(h2,a2)] = m
         for match in d.get('matches', []):
             code = match.get('code', '')
             # 🔒 跳过已完赛的比赛
@@ -92,6 +106,9 @@ def update_json(data):
                 if new_spf != old_spf and f['spf_win']:
                     match['spf'] = new_spf
                     updated_count += 1
+                # 淘汰赛code回填: API返回的code写入data.json, 后续可code匹配
+                if not match.get('code') and f.get('code'):
+                    match['code'] = f['code']
         log(f"SPF赔率更新: {updated_count}场 (跳过{skipped_finished}场已完赛)")
 
     # SPF-tip一致性校验: SPF更新后检查tip是否和赔率一致
@@ -134,19 +151,18 @@ def fetch_results():
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
 
-    # Gate 0: 从index.html加载赛程日期(权威来源, 不依赖API的date字段)
-    schedule_dates = {}
-    html = (REPO / "index.html").read_text(encoding='utf-8')
-    for m in re.finditer(r"\{ id:(\d+).*?date:'([^']+)'", html):
-        schedule_dates[int(m.group(1))] = m.group(2)
+    # Gate 0: 从config.json加载赛程日期(单一数据源, 不再regex解析HTML)
+    config = json.loads((REPO / 'config.json').read_text(encoding='utf-8'))
+    schedule_dates = {e['id']: e['date'] for e in config.get('schedule', [])}
     from datetime import date as dt_date
     today = dt_date.today()
 
     # Layer 1: 竞彩live API (实时窗口~48小时)
-    # 自动从data.json构建完整72场映射(不再硬编码遗漏R3比赛!)
+    # 自动从data.json构建映射(使用max_group_id, 不硬编码72)
+    max_gid = d.get('max_group_id', 72)
     team_to_id = {}
     for m in d['matches']:
-        if m['id'] <= 72:
+        if m['id'] <= max_gid:
             h = m.get('home',''); a = m.get('away','')
             if h and a: team_to_id[(h,a)] = m['id']
     swap = {(b,a):v for (a,b),v in team_to_id.items()}
@@ -251,7 +267,7 @@ def fetch_results():
     # 标记: result不为空但postMatch为空的场次 → 需要手动验证
     needs_verify = []
     for m in d['matches']:
-        if m.get('result') and not m.get('postMatch') and m['id'] <= 72:
+        if m.get('result') and not m.get('postMatch'):
             needs_verify.append(m['id'])
 
     if needs_verify:
@@ -370,10 +386,8 @@ def scrub_future_results():
     防止任何人(API/AI/手动)误写入未赛比赛的假数据."""
     if not DATA.exists(): return 0
     d = json.loads(DATA.read_text(encoding='utf-8'))
-    html = (REPO / "index.html").read_text(encoding='utf-8')
-    schedule_dates = {}
-    for m in re.finditer(r"\{ id:(\d+).*?date:'([^']+)'", html):
-        schedule_dates[int(m.group(1))] = m.group(2)
+    config = json.loads((REPO / 'config.json').read_text(encoding='utf-8'))
+    schedule_dates = {e['id']: e['date'] for e in config.get('schedule', [])}
     from datetime import date as dt_date
     today = dt_date.today()
 
