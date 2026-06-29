@@ -27,7 +27,7 @@ def safe_write(path, data):
         return False
     matches = data.get('matches', [])
     if not isinstance(matches, list) or len(matches) != 104:
-        log(f'REFUSED write: matches count={len(matches) if isinstance(matches,list) else \"N/A\"}')
+        log(f'REFUSED write: matches count={len(matches) if isinstance(matches,list) else "N/A"}')
         return False
     backup = path.with_suffix('.json.bak')
     try:
