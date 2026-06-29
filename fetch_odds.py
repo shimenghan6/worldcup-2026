@@ -20,6 +20,23 @@ DRY = "--dry-run" in sys.argv
 
 def log(msg): print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
+def safe_write(path, data):
+    """写入前校验: 必须是dict且包含104场比赛. 写入前自动备份."""
+    if not isinstance(data, dict) or 'matches' not in data:
+        log(f'REFUSED write: type={type(data).__name__}')
+        return False
+    matches = data.get('matches', [])
+    if not isinstance(matches, list) or len(matches) != 104:
+        log(f'REFUSED write: matches count={len(matches) if isinstance(matches,list) else \"N/A\"}')
+        return False
+    backup = path.with_suffix('.json.bak')
+    try:
+        if path.exists():
+            backup.write_text(path.read_text(encoding='utf-8'), encoding='utf-8')
+    except: pass
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    return True
+
 def get_token():
     """读取GitHub PAT"""
     pat_file = Path(os.path.expanduser("~/.github/pat"))
@@ -111,7 +128,8 @@ def update_json(data):
                     match['code'] = f['code']
         log(f"SPF赔率更新: {updated_count}场 (跳过{skipped_finished}场已完赛)")
 
-    # SPF-tip一致性校验: SPF更新后检查tip是否和赔率一致
+    # SPF-tip一致性校验: SPF更新后检查tip方向和赔率是否一致
+    # 🔒 AI预测只修正方向(不覆盖score/htft), template预测全修正
     fixed_tips = 0
     for match in d.get('matches', []):
         spf = match.get('spf', '')
@@ -124,13 +142,16 @@ def update_json(data):
         expected = '胜' if h <= min(draw, a) else ('负' if a <= min(h, draw) else '平')
         if tip != expected:
             match['tip'] = expected
-            # Also fix derived fields to match
-            if expected == '胜':
-                match['htft'] = '胜-胜/平-胜'
-                match['score'] = '2:0/1:0'
-            elif expected == '负':
-                match['htft'] = '负-负/平-负'
-                match['score'] = '0:1/0:2'
+            is_ai = match.get('source') == 'ai'
+            if not is_ai:
+                # Template预测: 全字段修正
+                if expected == '胜':
+                    match['htft'] = '胜-胜/平-胜'; match['score'] = '2:0/1:0'
+                elif expected == '负':
+                    match['htft'] = '负-负/平-负'; match['score'] = '0:1/0:2'
+                else:
+                    match['htft'] = '平平/平-平'; match['score'] = '1:1/0:0'
+            # AI预测: 只修正tip方向, 保留AI的score/htft/totalGoals
             log(f"tip自动修正: id={match['id']} {match.get('home','?')}vs{match.get('away','?')} {tip}->{expected} (SPF={spf})")
             fixed_tips += 1
     if fixed_tips: log(f"tip一致性修正: {fixed_tips}场")
@@ -141,7 +162,7 @@ def update_json(data):
     else:
         d['source'] = f"竞彩API检查+AI预估(检查于{now})"
         d['note'] = f"世界杯场次尚未在竞彩API中出现(当前{mc}场)。每小时自动检查。"
-    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    safe_write(DATA, d)
     log("data.json更新完成")
     return True
 
@@ -292,7 +313,7 @@ def fetch_results():
         updated += fixed_reversed
 
     if updated:
-        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        safe_write(DATA, d)
         log(f"赛果更新: {updated}场 待验证:{len(needs_verify)}场")
     return updated
 
@@ -337,7 +358,7 @@ def check_coverage():
         log("🟢 维度覆盖率恢复")
     
     d['dimension_coverage'] = {k: f'{v:.0f}%' for k, v in results.items()}
-    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    safe_write(DATA, d)
     log(f"维度覆盖: 平均{avg:.0f}% (弱项:{len(weak)}项)")
     return avg < 60  # returns True if needs AI refresh
 
@@ -414,7 +435,7 @@ def scrub_future_results():
         except: pass
 
     if scrubbed:
-        DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        safe_write(DATA, d)
         log(f"安全网: 清除了{scrubbed}场未来比赛的假数据")
     return scrubbed
 
