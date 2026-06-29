@@ -913,10 +913,31 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
   }
 });
 
+// Load AI predictions (overrides template predictions)
+async function loadAIPredictions() {
+  try {
+    const resp = await fetch('https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/ai_predictions.json?t=' + Date.now());
+    if (resp.ok) {
+      const aiPreds = await resp.json();
+      for (const m of MATCHES) {
+        const ai = aiPreds[String(m.id)];
+        if (!ai) continue;
+        if (ai.tip) m.odds.tip = ai.tip;
+        if (ai.score) m.odds.score = ai.score;
+        if (ai.htft) m.odds.htft = ai.htft;
+        if (ai.totalGoals) m.odds.totalGoals = ai.totalGoals;
+        if (ai.level) m.odds.level = ai.level;
+      }
+      console.log('AI predictions loaded:', Object.keys(aiPreds).length, 'matches');
+    }
+  } catch(e) { console.log('AI predictions unavailable, using template fallback'); }
+}
+
 // Init (data loads async, then renders)
 (async function init() {
   await loadLiveData();
   mergeLiveData();
+  await loadAIPredictions();  // AI predictions override template
   updateFreshness();
   render('schedule');
 })();
