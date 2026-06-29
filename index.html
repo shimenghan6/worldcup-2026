@@ -919,14 +919,25 @@ async function loadAIPredictions() {
     const resp = await fetch('https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/ai_predictions.json?t=' + Date.now());
     if (resp.ok) {
       const aiPreds = await resp.json();
+      const aiIds = new Set(Object.keys(aiPreds));
       for (const m of MATCHES) {
         const ai = aiPreds[String(m.id)];
-        if (!ai) continue;
-        if (ai.tip) m.odds.tip = ai.tip;
-        if (ai.score) m.odds.score = ai.score;
-        if (ai.htft) m.odds.htft = ai.htft;
-        if (ai.totalGoals) m.odds.totalGoals = ai.totalGoals;
-        if (ai.level) m.odds.level = ai.level;
+        if (ai) {
+          // AI预测: 使用AI数据
+          if (ai.tip) m.odds.tip = ai.tip;
+          if (ai.score) m.odds.score = ai.score;
+          if (ai.htft) m.odds.htft = ai.htft;
+          if (ai.totalGoals) m.odds.totalGoals = ai.totalGoals;
+          if (ai.level) m.odds.level = ai.level;
+        } else if (m.id >= 73 && !aiIds.has(String(m.id))) {
+          // 淘汰赛无AI预测 → 模板数据隐藏, 显示"-"避免混淆
+          const liveMatch = LIVE_DATA && LIVE_DATA.matches
+            ? LIVE_DATA.matches.find(lm => lm.id === m.id) : null;
+          if (liveMatch && liveMatch.source === 'template') {
+            m.odds.tip = '-'; m.odds.score = '-';
+            m.odds.htft = '-'; m.odds.level = '-'; m.odds.totalGoals = '-';
+          }
+        }
       }
       console.log('AI predictions loaded:', Object.keys(aiPreds).length, 'matches');
     }
