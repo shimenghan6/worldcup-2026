@@ -41,27 +41,21 @@ def migrate_source():
     log(f"source迁移完成: AI={ai_count} Template={tp_count} Total={ai_count+tp_count}")
 
 def load_rank():
-    """从index.html提取FIFA排名"""
-    html = HTML.read_text(encoding='utf-8')
-    m = re.search(r'const RANK=\{([^}]+)\}', html)
-    if not m: return {}
-    rank = {}
-    for pair in m.group(1).split(','):
-        parts = pair.strip().split(':')
-        if len(parts) == 2:
-            name = parts[0].strip()
-            try: rank[name] = int(parts[1].strip())
-            except: pass
-    return rank
+    """从config.json读取FIFA排名(单一数据源)"""
+    config = json.loads((REPO / 'config.json').read_text(encoding='utf-8'))
+    return {name: info['rank'] for name, info in config.get('teams', {}).items()}
 
 def load_schedule():
-    """从index.html提取赛程: group, round, venue"""
-    html = HTML.read_text(encoding='utf-8')
+    """从config.json读取赛程(单一数据源, 不再regex解析HTML)"""
+    config = json.loads((REPO / 'config.json').read_text(encoding='utf-8'))
     schedule = {}
-    for m in re.finditer(r"\{ id:(\d+).*?group:'([^']+)'.*?round:(\d+).*?venue:'([^']+)'", html):
-        mid = int(m.group(1)); group = m.group(2); rnd = int(m.group(3)); venue = m.group(4)
-        schedule[mid] = {'group': group, 'round': rnd, 'venue': venue}
+    for e in config.get('schedule', []):
+        schedule[e['id']] = {'group': e.get('group','?'), 'round': e.get('round',1), 'venue': e.get('venue','待确认')}
     return schedule
+
+def is_ai(m):
+    """统一判断: 该match的预测是否由AI skill负责"""
+    return m.get('source') == 'ai'
 
 def get_formation(tip, is_home, rank):
     """根据排名推算常用阵型"""
@@ -149,7 +143,7 @@ def fill_dimensions():
 
         # 字段所有权铁律: source='ai'的数据永不被模板覆盖
         # AI搜索写过真实球员名 → 永远不碰,即使缺某些维度
-        if m.get('source') == 'ai':
+        if is_ai(m):
             continue
         # source=template或无source → 允许fill_dimensions填充/升级模板
 
@@ -202,7 +196,7 @@ def fill_dimensions():
     # source='template'的预测由fill_dimensions生成机械基线
     pred_filled = 0
     for m in upcoming:
-        if m.get('source') == 'ai':
+        if is_ai(m):
             continue  # AI预测由skill负责
         home = m.get('home', '?'); away = m.get('away', '?')
         home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
@@ -246,7 +240,7 @@ def fill_dimensions():
     # 🔒 source='ai'的预测由lottery-analyzer skill负责, 此循环只调template
     dim_adjusted = 0
     for m in upcoming:
-        if m.get('source') == 'ai':
+        if is_ai(m):
             continue  # AI预测由skill负责, 不碰
         inj = m.get('injury', '')
         if not inj or '|' not in inj: continue
