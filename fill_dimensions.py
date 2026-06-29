@@ -18,6 +18,29 @@ TZ = timezone(timedelta(hours=8))
 
 def log(msg): print(f"[{datetime.now(TZ).strftime('%H:%M:%S')}] {msg}", flush=True)
 
+def safe_write(path, data):
+    """写入前校验: 必须是dict且包含104场比赛的matches列表. 写入前自动备份旧文件."""
+    if not isinstance(data, dict) or 'matches' not in data:
+        log(f'REFUSED write: type={type(data).__name__} (expected dict with matches)')
+        return False
+    matches = data.get('matches', [])
+    if not isinstance(matches, list) or len(matches) != 104:
+        log(f'REFUSED write: matches={len(matches) if isinstance(matches,list) else type(matches).__name__} (expected 104)')
+        return False
+    # Verify all matches are dicts
+    for i, m in enumerate(matches):
+        if not isinstance(m, dict):
+            log(f'REFUSED write: match[{i}] is {type(m).__name__}, not dict')
+            return False
+    # Backup old file
+    backup = path.with_suffix('.json.bak')
+    try:
+        if path.exists():
+            backup.write_text(path.read_text(encoding='utf-8'), encoding='utf-8')
+    except: pass
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    return True
+
 def migrate_source():
     """一次性source迁移: 根据injury内容为所有104场比赛添加source字段"""
     if not DATA.exists():
@@ -37,7 +60,7 @@ def migrate_source():
         else:
             m['source'] = 'template'
             tp_count += 1
-    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    safe_write(DATA, d)
     log(f"source迁移完成: AI={ai_count} Template={tp_count} Total={ai_count+tp_count}")
 
 def load_rank():
@@ -52,10 +75,6 @@ def load_schedule():
     for e in config.get('schedule', []):
         schedule[e['id']] = {'group': e.get('group','?'), 'round': e.get('round',1), 'venue': e.get('venue','待确认')}
     return schedule
-
-def is_ai(m):
-    """统一判断: 该match的预测是否由AI skill负责"""
-    return m.get('source') == 'ai'
 
 def get_formation(tip, is_home, rank):
     """根据排名推算常用阵型"""
@@ -128,8 +147,8 @@ def fill_dimensions():
     today = datetime.now(TZ).date()
     target_dates = {today.isoformat(), (today+timedelta(days=1)).isoformat(), (today+timedelta(days=2)).isoformat()}
 
-    # 所有未完赛比赛都检查(含淘汰赛≤104)
-    upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 104]
+    # 只处理template匹配(含淘汰赛≤104). AI匹配由ai_predictions.json负责
+    upcoming = [m for m in d['matches'] if not m.get('result') and m['id'] <= 104 and m.get('source') != 'ai']
 
     # 按id排序，优先近3天
     upcoming.sort(key=lambda m: (0 if m.get('id', 99) <= 48 else 1, m['id']))
@@ -141,11 +160,7 @@ def fill_dimensions():
         away = m.get('away', '?')
         inj = m.get('injury', '')
 
-        # 字段所有权铁律: source='ai'的数据永不被模板覆盖
-        # AI搜索写过真实球员名 → 永远不碰,即使缺某些维度
-        if is_ai(m):
-            continue
-        # source=template或无source → 允许fill_dimensions填充/升级模板
+        # fill_dimensions只处理template匹配(source='ai'的已在上层过滤)
 
         # 获取排名
         home_rank = ranks.get(home, 50)
@@ -196,8 +211,6 @@ def fill_dimensions():
     # source='template'的预测由fill_dimensions生成机械基线
     pred_filled = 0
     for m in upcoming:
-        if is_ai(m):
-            continue  # AI预测由skill负责
         home = m.get('home', '?'); away = m.get('away', '?')
         home_rank = ranks.get(home, 50); away_rank = ranks.get(away, 50)
 
@@ -237,11 +250,9 @@ def fill_dimensions():
         pred_filled += 1
 
     # === 维度感知预测调整: 解析injury中全部11维度, 智能微调预测 ===
-    # 🔒 source='ai'的预测由lottery-analyzer skill负责, 此循环只调template
+    # 只处理template匹配(AI已在上层过滤)
     dim_adjusted = 0
     for m in upcoming:
-        if is_ai(m):
-            continue  # AI预测由skill负责, 不碰
         inj = m.get('injury', '')
         if not inj or '|' not in inj: continue
         sections = [s.strip() for s in inj.split('|')]
@@ -450,7 +461,7 @@ def fill_dimensions():
     if dim_adjusted:
         log(f"维度感知调整: {dim_adjusted}场 (D1-D8+D11综合评分)")
 
-    DATA.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    safe_write(DATA, d)
     if filled: log(f"维度填充: {filled}场")
     if pred_filled: log(f"预测填充: {pred_filled}场")
 
