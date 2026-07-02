@@ -100,9 +100,9 @@
   },
   "83": {
     "tip": "平",
-    "score": "1:1/2:2",
+    "score": "2:1/1:1",
     "htft": "平平/平-平",
-    "totalGoals": "2球/3球",
+    "totalGoals": "3球/2球",
     "level": "🟠大概率",
     "home": "葡萄牙",
     "away": "克罗地亚",
@@ -126,13 +126,14 @@
       "expected": 2.5,
       "confidence": "中",
       "reason": "葡萄牙2场零进球攻击乏力;克罗地亚淘汰赛经验丰富但防守漏洞;双方首轮均保守,预计2-3球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "84": {
     "tip": "胜",
-    "score": "1:0/2:0",
+    "score": "2:0/1:0",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "1球/2球",
+    "totalGoals": "2球/1球",
     "level": "🟡稳胆",
     "home": "西班牙",
     "away": "奥地利",
@@ -156,13 +157,14 @@
       "expected": 2.0,
       "confidence": "高",
       "reason": "西班牙两翼全伤攻击宽度受限;0失球防守vs高压逼抢=低比分;亚马尔打不满全场;预计2球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "85": {
     "tip": "胜",
-    "score": "2:0/1:0",
+    "score": "2:1/1:1",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "1球/2球",
+    "totalGoals": "3球/2球",
     "level": "🟡稳胆",
     "home": "瑞士",
     "away": "阿尔及利亚",
@@ -186,13 +188,14 @@
       "expected": 2.5,
       "confidence": "中",
       "reason": "瑞士防守组织严整;阿尔及利亚防线漏洞但马赫雷斯火热;预计2-3球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "86": {
     "tip": "胜",
-    "score": "2:0/3:0",
+    "score": "2:1/1:1",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "2球/3球",
+    "totalGoals": "3球/2球",
     "level": "🟢铁胆",
     "home": "阿根廷",
     "away": "佛得角",
@@ -216,13 +219,14 @@
       "expected": 2.0,
       "confidence": "高",
       "reason": "佛得角零封西班牙+3场仅失2球;阿根廷无需全力;淘汰赛稳扎稳打;预计2球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "87": {
     "tip": "胜",
-    "score": "1:0/2:0",
+    "score": "1:0/0:0",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "1球/2球",
+    "totalGoals": "1球/1球",
     "level": "🟡稳胆",
     "home": "哥伦比亚",
     "away": "加纳",
@@ -246,13 +250,14 @@
       "expected": 1.5,
       "confidence": "高",
       "reason": "哥伦比亚最强防守1失球;加纳2场零封含英格兰;双方防守反击型;预计1-2球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "88": {
     "tip": "胜",
-    "score": "1:0/2:1",
+    "score": "1:2/0:2",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "1球/2球",
+    "totalGoals": "3球/2球",
     "level": "🟡稳胆",
     "home": "澳大利亚",
     "away": "埃及",
@@ -276,7 +281,8 @@
       "expected": 1.5,
       "confidence": "高",
       "reason": "萨拉赫存疑则埃及攻击腰斩;澳大利亚进攻乏力;双方首进淘汰赛极度保守;预计1球"
-    }
+    },
+    "ttg_calibrated": true
   },
   "89": {
     "tip": "胜",
