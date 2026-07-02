@@ -596,7 +596,7 @@ function renderSchedule() {
       lastDate = m.date;
     }
     const isFocus = m.focus ? ' with-odds' : '';
-    html += `<div class="match-card${isFocus}" onclick="showMatch(${m.id})" data-match-id="${m.id}">
+    html += `<div class="match-card${isFocus}${m.result ? ' finished' : ' upcoming'}" onclick="showMatch(${m.id})" data-match-id="${m.id}">
       <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
       <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
@@ -622,7 +622,7 @@ function renderMatchCards(matches, title) {
   if (matches.length === 0) return '';
   let html = title ? `<div class="date-header">${title}<span class="round-badge">${matches.length}场</span></div>` : '';
   html += matches.map(m => `
-    <div class="match-card" onclick="showMatch(${m.id})">
+    <div class="match-card${m.result?' finished':' upcoming'}" onclick="showMatch(${m.id})">
       <div class="m-group" style="background:${groupColor(m.group)}">${m.group}</div>
       <div class="team home"><span class="name">${m.home}${rankBadge(m.home)}</span><span class="flag">${flag(m.home)}</span></div>
       <div class="vs"><div style="font-size:1em">VS</div><div class="m-time">${m.time}</div></div>
@@ -952,9 +952,9 @@ async function loadAIPredictions() {
   updateFreshness();
   // Auto-scroll to first upcoming match
   setTimeout(() => {
-    const firstUpcoming = [...document.querySelectorAll('.match-card')].find(c => !c.classList.contains('finished'));
+    const firstUpcoming = document.querySelector('.match-card.upcoming');
     if (firstUpcoming) firstUpcoming.scrollIntoView({behavior:'smooth', block:'start'});
-  }, 600);
+  }, 800);
   render('schedule');
 })();
 
