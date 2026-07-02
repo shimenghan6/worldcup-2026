@@ -14,6 +14,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 REPO = Path(os.path.expanduser("~/github-repos/worldcup-2026"))
 DATA = REPO / "data.json"
 API = "https://webapi.sporttery.cn/gateway/uniform/football/getMatchCalculatorV1.qry?channel=c&poolCode=hhad,had"
+API_TTG = "https://webapi.sporttery.cn/gateway/uniform/football/getMatchCalculatorV1.qry?channel=c&poolCode=ttg"
 GITHUB_API = "https://api.github.com/repos/shimenghan6/worldcup-2026/contents/data.json"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://m.sporttery.cn/", "Accept": "application/json"}
 DRY = "--dry-run" in sys.argv
@@ -60,15 +61,83 @@ def fetch():
                 league = m.get('leagueAllName', '')
                 if '世界杯' in league: has_wc = True
                 had = m.get('had', {})
+                ttg = m.get('ttg', {})
                 result.append({
                     'code': m.get('matchNumStr', ''), 'league': league,
                     'home': m.get('homeTeamAllName', ''), 'away': m.get('awayTeamAllName', ''),
                     'date': m.get('matchDate', ''), 'time': m.get('matchTime', ''),
                     'spf_win': had.get('h', ''), 'spf_draw': had.get('d', ''), 'spf_lose': had.get('a', ''),
+                    'ttg': {k: ttg.get(k,'') for k in ['s0','s1','s2','s3','s4','s5','s6','s7']} if ttg else {},
                 })
         return {'hasWorldCup': has_wc, 'matchCount': len(result), 'matches': result}
     except Exception as e:
         log(f"请求失败: {e}"); return None
+
+def fetch_ttg():
+    """单独抓取TTG总进球赔率(不能和SPF混用poolCode)"""
+    try:
+        resp = requests.get(API_TTG, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get('success'): return []
+        result = []
+        for day in data['value']['matchInfoList']:
+            for m in day.get('subMatchList', []):
+                if '世界杯' not in m.get('leagueAllName', ''): continue
+                ttg = m.get('ttg', {})
+                if not ttg or not ttg.get('s0'): continue
+                result.append({
+                    'code': m.get('matchNumStr', ''),
+                    'home': m.get('homeTeamAllName', ''), 'away': m.get('awayTeamAllName', ''),
+                    'ttg': {k: ttg.get(k,'') for k in ['s0','s1','s2','s3','s4','s5','s6','s7']},
+                })
+        return result
+    except Exception as e:
+        log(f"TTG请求失败: {e}"); return []
+
+def process_ttg(ttg_data):
+    """TTG赔率→期望总进球→ai_predictions.json + 历史快照→ttg_history.json"""
+    if not ttg_data: return 0
+    d = json.loads(DATA.read_text(encoding='utf-8'))
+    ai_path = REPO / 'ai_predictions.json'
+    hist_path = REPO / 'ttg_history.json'
+    ai = json.loads(ai_path.read_text(encoding='utf-8')) if ai_path.exists() else {}
+    hist = json.loads(hist_path.read_text(encoding='utf-8')) if hist_path.exists() else {}
+    now = datetime.now(timezone(timedelta(hours=8))).strftime('%m-%d %H:%M')
+    updated = 0
+    for api_m in ttg_data:
+        h = api_m['home'].strip(); a = api_m['away'].strip()
+        for match in d['matches']:
+            if match.get('result'): continue
+            if match.get('home','').strip() == h and match.get('away','').strip() == a:
+                mid = str(match['id'])
+                ttg = api_m['ttg']
+                odds = {}
+                for k in ['s0','s1','s2','s3','s4','s5','s6','s7']:
+                    try: odds[k] = float(ttg.get(k, 0))
+                    except: odds[k] = 0
+                probs = {k: 1.0/v if v > 0 else 0 for k, v in odds.items()}
+                total_p = sum(probs.values()) or 1
+                goals = [0,1,2,3,4,5,6,7.5]
+                exp = sum(goals[i]*probs[k]/total_p for i,k in enumerate(['s0','s1','s2','s3','s4','s5','s6','s7']))
+                # 当前期望写入ai_predictions (verdict由AI skill决定, 这里只存原始数据)
+                if mid not in ai: ai[mid] = {}
+                ai[mid]['ttg'] = {'odds': {str(i):odds.get('s%d'%i if i<7 else 's7',0) for i in range(8)},
+                                   'expected': round(exp,1), 'updated': now}
+                # 历史快照
+                if mid not in hist: hist[mid] = {}
+                hist[mid][now] = {'odds': {str(i):odds.get('s%d'%i if i<7 else 's7',0) for i in range(8)},
+                                  'expected': round(exp,1)}
+                # 只保留最近48条快照
+                timestamps = sorted(hist[mid].keys())
+                for old_ts in timestamps[:-48]:
+                    del hist[mid][old_ts]
+                updated += 1; break
+    ai_path.write_text(json.dumps(ai, ensure_ascii=False, indent=2), encoding='utf-8')
+    hist_path.write_text(json.dumps(hist, ensure_ascii=False, indent=2), encoding='utf-8')
+    total_snapshots = sum(len(v) for v in hist.values())
+    log(f"TTG: {updated}场 (快照{total_snapshots}条历史)")
+    return updated
 
 def update_json(data):
     if not DATA.exists(): return False
@@ -458,9 +527,11 @@ def main():
     if not DRY:
         update_json(data)
         fetch_results()
-        # 终极安全网: 清除未来比赛的假数据(任何来源)
         scrub_future_results()
-        # 每次运行轻量检查,维度不足时自动填充
+        # TTG总进球赔率 (独立API, 存入ai_predictions.json)
+        ttg_data = fetch_ttg()
+        if ttg_data: process_ttg(ttg_data)
+        # 维度填充
         try:
             import fill_dimensions
             ok = fill_dimensions.fill_dimensions()
