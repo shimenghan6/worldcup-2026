@@ -248,13 +248,11 @@ def fetch_results():
     today = dt_date.today()
 
     # Layer 1: 竞彩live API (实时窗口~48小时)
-    # 自动从data.json构建映射(使用max_group_id, 不硬编码72)
-    max_gid = d.get('max_group_id', 72)
+    # 自动构建全量104场映射(小组赛+淘汰赛)
     team_to_id = {}
     for m in d['matches']:
-        if m['id'] <= max_gid:
-            h = m.get('home',''); a = m.get('away','')
-            if h and a: team_to_id[(h,a)] = m['id']
+        h = m.get('home',''); a = m.get('away','')
+        if h and a: team_to_id[(h,a)] = m['id']
     swap = {(b,a):v for (a,b),v in team_to_id.items()}
     team_to_id.update(swap)
 
