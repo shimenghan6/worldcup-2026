@@ -131,9 +131,9 @@
   },
   "84": {
     "tip": "胜",
-    "score": "2:0/1:0",
+    "score": "2:1/1:0",
     "htft": "胜-胜/平-胜",
-    "totalGoals": "2球/1球",
+    "totalGoals": "3球/2球",
     "level": "🟡稳胆",
     "home": "西班牙",
     "away": "奥地利",
@@ -153,10 +153,10 @@
       "updated": "07-02 18:00"
     },
     "ttg_analysis": {
-      "verdict": "小球",
-      "expected": 2.0,
-      "confidence": "高",
-      "reason": "西班牙两翼全伤攻击宽度受限;0失球防守vs高压逼抢=低比分;亚马尔打不满全场;预计2球"
+      "verdict": "均衡",
+      "expected": 2.8,
+      "confidence": "中",
+      "reason": "盘口预期3.0球倾向大球;西班牙两翼伤缺但Yamal可打满+Muñoz恢复=边锋非真空;0失球防守历史级;奥地利高压逼抢漏反击空间;预计2-3球"
     },
     "ttg_calibrated": true
   },
