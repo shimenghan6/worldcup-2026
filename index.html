@@ -251,7 +251,7 @@ html { scrollbar-color: var(--border) var(--bg); scrollbar-width:thin; }
   <span id="freshnessText">📡 数据加载中...</span>
 </div>
 <div class="container">
-  <div id="filterBar" class="filter-bar"></div>
+  <div id="filterBar" class="filter-bar" style="position:sticky;top:52px;z-index:99;background:rgba(17,22,64,0.9);backdrop-filter:blur(8px);padding:8px 16px;border-bottom:1px solid var(--border)"></div>
   <div id="matchArea"></div>
 </div>
 
@@ -950,6 +950,11 @@ async function loadAIPredictions() {
   mergeLiveData();
   await loadAIPredictions();  // AI predictions override template
   updateFreshness();
+  // Auto-scroll to first upcoming match
+  setTimeout(() => {
+    const firstUpcoming = [...document.querySelectorAll('.match-card')].find(c => !c.classList.contains('finished'));
+    if (firstUpcoming) firstUpcoming.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 600);
   render('schedule');
 })();
 
