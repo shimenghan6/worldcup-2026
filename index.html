@@ -929,6 +929,10 @@ async function loadAIPredictions() {
           if (ai.htft) m.odds.htft = ai.htft;
           if (ai.totalGoals) m.odds.totalGoals = ai.totalGoals;
           if (ai.level) m.odds.level = ai.level;
+        // TTG大小球: 展示
+        if (ai.ttg_analysis && ai.ttg_analysis.verdict !== 'N/A') {
+          m.odds.ttg = ai.ttg_analysis.verdict + ' ' + (ai.ttg_analysis.expected||'?') + '球';
+        }
         } else if (m.id >= 73 && !aiIds.has(String(m.id))) {
           // 淘汰赛无AI预测 → 模板数据隐藏, 显示"-"避免混淆
           const liveMatch = LIVE_DATA && LIVE_DATA.matches
