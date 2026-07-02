@@ -47,7 +47,20 @@
     "level": "🟢铁胆",
     "home": "美国",
     "away": "波黑",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.1,
+      "market_exp": 2.5,
+      "opening_exp": 2.5,
+      "trend": "stable",
+      "dimension_bonus": 0.6,
+      "confidence": "中",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "主队高进球(+0.3)"
+      ]
+    }
   },
   "82": {
     "tip": "胜",
@@ -57,7 +70,21 @@
     "level": "🟡稳胆",
     "home": "比利时",
     "away": "塞内加尔",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.4,
+      "market_exp": 2.5,
+      "opening_exp": 2.5,
+      "trend": "stable",
+      "dimension_bonus": 0.9,
+      "confidence": "高",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)",
+        "客队高进球(+0.3)"
+      ]
+    }
   },
   "83": {
     "tip": "平",
@@ -67,7 +94,21 @@
     "level": "🟠大概率",
     "home": "葡萄牙",
     "away": "克罗地亚",
-    "updated": "2026-06-29T21:29:49+08:00"
+    "updated": "2026-06-29T21:29:49+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.7,
+      "market_exp": 2.8,
+      "opening_exp": 2.8,
+      "trend": "stable",
+      "dimension_bonus": 0.9,
+      "confidence": "高",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)",
+        "主队高进球(+0.3)"
+      ]
+    }
   },
   "84": {
     "tip": "胜",
@@ -77,7 +118,21 @@
     "level": "🟡稳胆",
     "home": "西班牙",
     "away": "奥地利",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.4,
+      "market_exp": 3.0,
+      "opening_exp": 3.0,
+      "trend": "stable",
+      "dimension_bonus": 0.4,
+      "confidence": "高",
+      "reasons": [
+        "伤病-2核心缺阵(-0.5球)",
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)"
+      ]
+    }
   },
   "85": {
     "tip": "胜",
@@ -87,7 +142,21 @@
     "level": "🟡稳胆",
     "home": "瑞士",
     "away": "阿尔及利亚",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.5,
+      "market_exp": 2.6,
+      "opening_exp": 2.6,
+      "trend": "stable",
+      "dimension_bonus": 0.9,
+      "confidence": "高",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)",
+        "主队高进球(+0.3)"
+      ]
+    }
   },
   "86": {
     "tip": "胜",
@@ -97,7 +166,20 @@
     "level": "🟢铁胆",
     "home": "阿根廷",
     "away": "佛得角",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.8,
+      "market_exp": 3.2,
+      "opening_exp": 3.2,
+      "trend": "stable",
+      "dimension_bonus": 0.6,
+      "confidence": "高",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "主队高进球(+0.3)"
+      ]
+    }
   },
   "87": {
     "tip": "胜",
@@ -107,7 +189,20 @@
     "level": "🟡稳胆",
     "home": "哥伦比亚",
     "away": "加纳",
-    "updated": "2026-06-29T20:07:04+08:00"
+    "updated": "2026-06-29T20:07:04+08:00",
+    "ttg": {
+      "verdict": "大球",
+      "expected_goals": 3.1,
+      "market_exp": 2.5,
+      "opening_exp": 2.5,
+      "trend": "stable",
+      "dimension_bonus": 0.6,
+      "confidence": "中",
+      "reasons": [
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)"
+      ]
+    }
   },
   "88": {
     "tip": "胜",
@@ -117,7 +212,21 @@
     "level": "🟡稳胆",
     "home": "澳大利亚",
     "away": "埃及",
-    "updated": "2026-06-29T21:29:49+08:00"
+    "updated": "2026-06-29T21:29:49+08:00",
+    "ttg": {
+      "verdict": "均衡",
+      "expected_goals": 2.2,
+      "market_exp": 2.1,
+      "opening_exp": 2.1,
+      "trend": "stable",
+      "dimension_bonus": 0.1,
+      "confidence": "中",
+      "reasons": [
+        "伤病-4核心缺阵(-0.5球)",
+        "主队3前锋(+0.3)",
+        "客队3前锋(+0.3)"
+      ]
+    }
   },
   "89": {
     "tip": "胜",
