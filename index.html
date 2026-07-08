@@ -435,7 +435,7 @@ let DATA_UPDATED = '2026-06-06 (发布日)';
 
 async function loadLiveData() {
   try {
-    const resp = await fetch('https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/data.json?t=' + Date.now());
+    const resp = await fetch('./data.json?t=' + Date.now());
     if (resp.ok) {
       LIVE_DATA = await resp.json();
       DATA_SOURCE = LIVE_DATA.source || '竞彩网+AI分析';
@@ -916,7 +916,7 @@ document.getElementById('navTabs').addEventListener('click', function(e) {
 // Load AI predictions (overrides template predictions)
 async function loadAIPredictions() {
   try {
-    const resp = await fetch('https://raw.githubusercontent.com/shimenghan6/worldcup-2026/main/ai_predictions.json?t=' + Date.now());
+    const resp = await fetch('./ai_predictions.json?t=' + Date.now());
     if (resp.ok) {
       const aiPreds = await resp.json();
       const aiIds = new Set(Object.keys(aiPreds));
